@@ -285,14 +285,36 @@ Both are related; often the second is just a threshold applied to the first.
 
 ---
 
-# Summary Techniques: A Closer Look
+# Summary Techniques: Methods
 
-\begin{block}{Taxonomy of Summaries}
-\small
+\vspace{0.2cm}
+
+\begin{block}{1. Simple Marginal Contributions (Isolated changes)}
+\footnotesize
 \begin{itemize}
-    \item \textbf{Local Attribution:} Shapley (fairness), LIME (additive), RISE (mean included).
-    \item \textbf{Local Selection:} Optimization-based (L2X, INVASE).
-    \item \textbf{Global Equivalence:} Selection on dataset loss $\equiv$ Classical Feature Selection.
+    \setlength{\itemsep}{0pt}
+    \item \textbf{Remove Individual (Occlusion):} $a_i = u(D) - u(D \setminus \{i\})$
+    \item \textbf{Include Individual (Univariate):} $a_i = u(\{i\}) - u(\emptyset)$
+    \item \textbf{Mean when Included (RISE):} $a_i = E_{p(S|i \in S)}[u(S)]$
+\end{itemize}
+\end{block}
+
+\begin{block}{2. Axiomatic \& Model-Based Attribution (Interactions)}
+\footnotesize
+\begin{itemize}
+    \setlength{\itemsep}{0pt}
+    \item \textbf{Additive Models (LIME):} $\min_{b} \sum_{S \subseteq D} \pi(S) (b_0 + \sum_{i \in S} b_i - u(S))^2 + \Omega(b)$
+    \item \textbf{Shapley Values (SHAP):} $\phi_i(u) = \frac{1}{d} \sum_{S \subseteq D \setminus \{i\}} \binom{d-1}{|S|}^{-1} [u(S \cup \{i\}) - u(S)]$
+\end{itemize}
+\end{block}
+
+\begin{block}{3. Selection via Optimization (Optimal subset $S^*$)}
+\footnotesize
+\begin{itemize}
+    \setlength{\itemsep}{0pt}
+    \item \textbf{Low-value (MP):} $S^* = \arg \min_S u(D \setminus S) + \lambda |S|$
+    \item \textbf{High-value (L2X):} $S^* = \arg \max_S u(S) - \lambda |S|$
+    \item \textbf{Partitioned (MM):} $S^* = \arg \max_S u(S) - \gamma u(D \setminus S) - \lambda |S|$
 \end{itemize}
 \end{block}
 
@@ -419,7 +441,7 @@ $$\phi_i(u) = \frac{1}{d} \sum_{S \subseteq D \setminus \{i\}} \binom{d-1}{|S|}^
 ---
 
 
-# Banzhaf Values & Coalitional Excess
+# Banzhaf Values
 
 While Shapley is the "standard," other game-theoretic concepts explain methods like RISE or L2X.
 
@@ -428,16 +450,6 @@ Instead of permutations, it averages marginal contributions over all \textbf{sub
 $$\psi_i(u) = \frac{1}{2^{d-1}} \sum_{S \subseteq D \setminus \{i\}} (u(S \cup \{i\}) - u(S))$$
 \textit{Key connection:} The \textbf{RISE} method is a modified version of this value.
 \end{block}
-
-\vfill
-
-\begin{block}{Definition 4: Coalitional Excess}
-For an allocation $z$ and coalition $S$, the excess measures "unhappiness":
-$$e(S, z) = u(S) - \sum_{i \in S} z_i$$
-\end{block}
-
-\vfill
-\centering \footnotesize \textit{Feature Selection methods (L2X, INVASE) are equivalent to maximizing this excess.}
 
 
 ---
