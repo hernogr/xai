@@ -66,7 +66,9 @@ In other words, the authors posit that exploring the “EiGANspace” gives us n
 
 # Background: Generative Adversarial Networks
 
-> Seminal Paper: *Goodfellow et al. (2014)*
+\begin{center}
+Seminal Paper: \textbf{Goodfellow et al. (2014)}
+\end{center}
 
 - **Objective:** Generative Image Modeling—create realistic-looking, artificial
 images that resemble the training data.
@@ -77,29 +79,60 @@ context.
 
 \vspace{1em}
 \begin{center}
-\includegraphics[width=0.6\columnwidth]{imgs/gan_background.png}
+\includegraphics[width=0.5\columnwidth]{imgs/gan_background.png}
 \end{center}
 
 
 ---
 
-# Background: BigGAN
+# Background: BigGAN ---
 
-- Class-conditional GAN for high-resolution ImageNet images
-- Latent vector $\mathbf{z}$ is passed as **additional input** to all layers (no separate style vector)
-- State-of-the-art for diverse, high-quality image generation
+**BigGAN** (Brock et al., ICLR 2019): class-conditional GAN for high-resolution image synthesis.
+
+- **Class-Conditional Generation:** given $\mathbf{z}$ and a class label (e.g., "dog"), models $p(\mathbf{x} \mid \text{class})$ — the generated image depends on both the latent code and the class.
+- **Skip-Z Inputs:** $\mathbf{z}$ is injected as a shared embedding into *every* intermediate layer:
 
 \begin{center}
-\includegraphics[width=0.55\columnwidth]{imgs/biggan_background.png}
+$\mathbf{y}_i = G_i(\mathbf{y}_{i-1},\ \mathbf{z})$, where $\mathbf{y}_i$ is the feature tensor at layer $i$.
 \end{center}
+
+
+## In plain English
+
+Unlike a basic GAN where $\mathbf{z}$ only enters at the start, BigGAN re-injects it at every layer: the model "remembers" the original seed while building the image step by step, allowing $\mathbf{z}$ to influence features at every level of abstraction.
 
 ---
 
-# Background: StyleGAN
+# Background: BigGAN — Latent Space Control ---
 
-- Style-based generator: separates high-level attributes from stochastic variation
-- Maps $\mathbf{z} \rightarrow \mathbf{w}$ via mapping network; $\mathbf{w}$ controls synthesis via AdaIN
-- **$\mathbf{w}$-space** is more disentangled than $\mathbf{z}$-space
+BigGAN generates images from two inputs that control different aspects of the output:
+
+- **Class label $c$:** *what* to generate (e.g., "dog", "cat")
+- **Latent vector $\mathbf{z} \sim \mathcal{N}(0, I)$:** *which specific instance* — pose, lighting, background, but **no dimension has a predefined meaning**; the structure is learned implicitly during training.
+  
+
+```python
+image1 = G(z1, "dog")   # a golden retriever sitting
+image2 = G(z2, "dog")   # a husky running
+```
+
+Same $\mathbf{z}$, different class → analogous instance of a different subject:
+
+```python
+image3 = G(z1, "cat")   # a cat with attributes "analogous" to z1
+```
+
+\begin{center}
+\includegraphics[width=0.4\columnwidth]{imgs/biggan_background.png}
+\end{center}
+
+
+
+---
+
+# Background: StyleGAN 1/2
+
+StyleGAN (Karras et al., CVPR 2019): style-based generator inspired by style transfer — separating content from appearance.
 
 \begin{center}
 \includegraphics[width=0.65\columnwidth]{imgs/stylegan_background.png}
@@ -107,25 +140,86 @@ context.
 
 ---
 
+# Background: StyleGAN  2/2
+
+- **Motivation:** gain fine-grained control over the image synthesis process at different levels of abstraction (pose, lighting, texture, fine details).
+- **Key idea:** instead of feeding $\mathbf{z}$ directly, map it to a style vector $\mathbf{w}$ that controls synthesis at each layer via AdaIN:
+
+$$\mathbf{w} = M(\mathbf{z}), \qquad \mathbf{y}_i = G_i(\mathbf{y}_{i-1},\ \mathbf{w})$$
+
+- **$\mathbf{w}$-space** is more disentangled than $\mathbf{z}$-space — a better place to look for interpretable directions.
+
+
+---
+
 # Background: PCA
 
-- **Principal Component Analysis**: finds orthogonal axes of maximum variance
-- Given data $\mathbf{y}_{1:N}$, PCA yields basis $\mathbf{V}$ and mean $\boldsymbol{\mu}$
-- Project data: $\mathbf{x}_{1:N} = \mathbf{V}^T(\mathbf{y}_{1:N} - \boldsymbol{\mu})$
-- First PCs capture the most variance; later PCs capture finer details
+:::: columns
+::: {.column width="60%"}
+1. **What is it?**
+
+- An unsupervised learning technique for finding a lower-dimensional representation of a dataset
+- Find axes that explain the most variance in the data
+- Principal Components are these axes: they equal the eigenvectors corresponding to the largest eigenvalues of the covariance matrix
+
+2. **Why is it useful in our context?**
+
+  - Each PCA basis vector helps better
+    separate our data, or, in this context,
+    latent space representation vectors
+:::
+::: {.column width="38%"}
+
+![](imgs/pca.png)
+
+:::
+::::
+
 
 ---
 
-# Related Work
+# Related Work 
 
-- **Supervised directions**: require attribute labels to train classifiers in latent space
-- **GAN analysis**: SeFa, closed-form factorization of generator weights
-- GANSpace is **unsupervised** — no attribute annotations needed
-- Related applications: camera motion, scene synthesis, image memorability
+- **Supervised latent directions** (Jahanian et al., Goetschalckx et al.): useful but require manual labeling of training images — expensive and hard to scale.
+
+- **GANs with disentangled representations** (Ramesh et al.): would allow fine-grained edits, but retraining from scratch is extremely computationally expensive.
+
+**So, why not take an already-trained GAN and analyze its latent space directly?**
 
 ---
 
-# Methods: StyleGAN Approach
+# Finding Useful Directions in Latent Space ---
+
+We want directions in latent space that correspond to meaningful changes in pixel space — e.g., a direction that smoothly varies hair color while leaving everything else unchanged.
+
+**Idea:** use PCA to find the most influential directions.
+
+**Issue:** where to run PCA?
+
+- **$\mathbf{z}$-space prior:** isotropic by construction — all directions equally likely, no structure to exploit.
+- **Pixel space:** too high-dimensional and complex to yield interpretable directions.
+
+## In plain English
+
+We need a space that is neither too raw nor too complex — somewhere in between where the GAN has already organized semantic information. That is exactly what the intermediate feature space of the network provides.
+
+---
+
+# Methods: StyleGAN Approach 1/2
+
+**Idea**: PCA directly on $\mathbf{w}$-space samples
+
+$$\mathbf{w} = M(\mathbf{z}), \qquad \mathbf{y}_i = G_i(\mathbf{y}_{i-1},\ \mathbf{w})$$
+
+- $\mathbf{z}$ is a raw random seed — 512 numbers with no explicit semantic structure. 
+- The mapping network $M$ transforms it into $\mathbf{w}$, a vector where semantic attributes are more linearly separated.
+-  Think of it as converting from polar to Cartesian coordinates: same information, but in a coordinate system where it is easier to move in one direction without affecting the others. 
+- That is why GANSpace applies PCA directly in $\mathbf{w}$-space rather than $\mathbf{z}$-space for StyleGAN.
+
+
+---
+
+# Methods: StyleGAN Approach 2/2
 
 **Idea**: PCA directly on $\mathbf{w}$-space samples
 
@@ -133,27 +227,77 @@ context.
 2. Apply PCA to $\mathbf{w}_{1:N}$ → basis $\mathbf{V}$, mean $\boldsymbol{\mu}$
 3. Represent each $\mathbf{w}$ in new basis: $\mathbf{x} = \mathbf{V}^T(\mathbf{w} - \boldsymbol{\mu})$
 
-\begin{exampleblock}{Editing}
+## Editing
 Move in the $k$-th principal direction with magnitude $\alpha$:
 $$\mathbf{w}' = \mathbf{w} + \alpha \mathbf{v}_k$$
 Apply $\mathbf{w}'$ to some or all synthesis layers for global vs. localized edits.
-\end{exampleblock}
 
 ---
 
-# Methods: BigGAN Approach
+# Methods: BigGAN Approach 1/2
 
-**Issue**: BigGAN has no separate style vector; $\mathbf{z}$ is passed as input at each layer
+**Idea:** since BigGAN has no separate $\mathbf{w}$, run PCA at the first linear layer and transfer the principal directions back to $\mathbf{z}$-space.
 
-\begin{center}
-\includegraphics[width=0.7\columnwidth]{imgs/ganspace_pca_biggan.png}
-\end{center}
+**Step 1 — PCA in feature space:**
 
-**(Step 1)** PCA at intermediate layer $i$: sample $\mathbf{z}_{1:N}$, process to $\mathbf{y}_{1:N}$, apply PCA → $\mathbf{V}$, $\boldsymbol{\mu}$, project to $\mathbf{x}_{1:N} = \mathbf{V}^T(\mathbf{y}_{1:N} - \boldsymbol{\mu})$
+1. Sample $N$ random vectors $\mathbf{z}_{1:N}$
+2. Process through model to get feature tensors $\mathbf{y}_{1:N}$ at layer $i$
+3. Apply PCA to $\mathbf{y}_{1:N}$ → basis $\mathbf{V}$, mean $\boldsymbol{\mu}$
+4. Project: $\mathbf{x}_{1:N} = \mathbf{V}^T(\mathbf{y}_{1:N} - \boldsymbol{\mu})$
 
-**(Step 2)** Find latent directions: $\mathbf{U} = \arg\min_{\mathbf{U}} \sum_j \|\mathbf{U}\mathbf{x}_j - \mathbf{z}_j\|^2$
+**Step 2 — Transfer to latent space:**
 
-Edit: $\mathbf{z}' = \mathbf{z} + \mathbf{U}\mathbf{x}$
+$$\mathbf{U} = \underset{\mathbf{U}}{\arg\min} \sum_j \|\mathbf{U}\mathbf{x}_j - \mathbf{z}_j\|^2$$
+
+- Editing then follows the same form as StyleGAN: $$\mathbf{z}' = \mathbf{z} + \mathbf{U}\mathbf{x}$
+
+---
+
+# Methos BigGAN as Code
+
+\fontsize{10pt}{9pt}
+:::: columns
+::: column
+```python
+
+# 1. Load pretrained BigGAN (frozen)
+model = BigGAN.from_pretrained(
+  "biggan-deep-512").eval()
+
+# 2. Sample latent vectors 
+# and extract features
+Z = torch.randn(10000, 128)
+Y = model.first_linear_layer(Z)
+Y = Y.detach().numpy()
+
+# 3. PCA on features
+pca = PCA(n_components=50).fit(Y)
+X = pca.transform(Y) # (10000, 50)
+V = pca.components_ # (50, d)
+```
+:::
+::: column
+```python
+# 4. Regression: 
+#   find directions in z-space
+reg = LinearRegression().fit(
+  X, Z.numpy())
+U = reg.coef_ # (50, 128)
+
+# 5. Edit an image
+z = torch.randn(1, 128)
+class_label = one_hot(
+  "dog", num_classes=1000)
+
+k = 3 # direction (named manually)
+alpha = 2.0 # magnitude of edit
+
+z_edit = z + alpha * torch.tensor(U[k])
+image  = model(z_edit, class_label)
+```
+:::
+::::
+
 
 ---
 
@@ -182,21 +326,20 @@ Edit: $\mathbf{z}' = \mathbf{z} + \mathbf{U}\mathbf{x}$
 \includegraphics[width=0.85\columnwidth]{imgs/ganspace_cats_grid.png}
 \end{center}
 
-\begin{exampleblock}{Key Finding 1}
+## Key Finding 1
 Changing the \textbf{first 20} PCs in latent space corresponds to changes in image \textbf{layout}, \textbf{configuration}, and \textbf{perspective}; later PCs dictate object appearance, background, and smaller details.
-\end{exampleblock}
 
 ---
 
 # Findings and Results
 
 \begin{center}
-\includegraphics[width=0.9\columnwidth]{imgs/ganspace_variance_pdf.png}
+\includegraphics[width=0.75\columnwidth]{imgs/ganspace_variance_pdf.png}
 \end{center}
 
-\begin{exampleblock}{Key Finding 2}
+## Key Finding 2
 StyleGAN's \textbf{first 100 PCs sufficiently explain overall image} appearance, and are distributed unimodally and almost independently.
-\end{exampleblock}
+
 
 ---
 
@@ -206,9 +349,9 @@ StyleGAN's \textbf{first 100 PCs sufficiently explain overall image} appearance,
 \includegraphics[width=0.8\columnwidth]{imgs/ganspace_class_independent.png}
 \end{center}
 
-\begin{exampleblock}{Key Finding 3}
+
+## Key Finding 3
 BigGAN's PCs seem to be \textbf{class-independent}: PCA gives the same results for different images in different classes.
-\end{exampleblock}
 
 ---
 
@@ -221,9 +364,6 @@ BigGAN's PCs seem to be \textbf{class-independent}: PCA gives the same results f
 - StyleGAN faces cannot be translated in the image
 - PCs for wrinkles/makeup have no effect on children/men
 
-\begin{center}
-\includegraphics[width=\columnwidth]{imgs/ganspace_limitations.png}
-\end{center}
 :::
 ::: {.column width="48%"}
 **Entanglement/Superposition**
@@ -231,35 +371,26 @@ BigGAN's PCs seem to be \textbf{class-independent}: PCA gives the same results f
 - One PC for StyleGAN cars corresponds to sportiness *and* open-road backgrounds
 - Rotating a dog causes its mouth to open
 
+:::
+::::
+
 \begin{center}
 \includegraphics[width=\columnwidth]{imgs/ganspace_entanglement.png}
 \end{center}
-:::
-::::
+
 
 ---
 
 # Comparison with Related Techniques
 
-:::: columns
-::: {.column width="50%"}
-**GANSpace (PCA)**
+**vs. random directions:** moving $\mathbf{z}$ in a random direction produces mixed, uninterpretable changes — multiple attributes shift at once with no clear order. PCs, by contrast, are ranked by variance and tend to separate attributes. Images (a)(b)(c)(d) demonstrate this: fixing the first 5 PCs freezes the car's pose, while fixing 5 random directions freezes nothing meaningful.
 
-- Gives separated, ordered series of stylistic edit axes
-- Random directions produce indiscernible changes
+**vs. supervised methods:** GANSpace achieves similar results — e.g., the smile edit on the right — with no extra training or labels. The downside is slightly more entanglement: making someone smile may also subtly shift the head or background. Supervised methods are more precise but require a pretrained classifier for each attribute.
 
 \begin{center}
-\includegraphics[width=0.9\columnwidth]{imgs/ganspace_comparison.png}
+\includegraphics[width=0.75\columnwidth]{imgs/ganspace_comparison.png}
 \end{center}
-:::
-::: {.column width="50%"}
-**vs. Supervised methods**
 
-- Results similar to supervised approaches, without extra training
-- Provides **many more** edit directions
-- Some additional entanglement
-:::
-::::
 
 ---
 
