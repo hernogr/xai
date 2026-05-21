@@ -22,34 +22,64 @@ bibliography: references.bib
 
 # GANSpace: Motivation
 
+- GANs are models trained to generate realistic-looking images well—and they do!
+- They have not been designed, however, to make the image-generation process
+itself interpretable, or to support edits to generated images
+- E.g.: This GAN generates faces well and can take in high-level styles or criteria
+(gender, age, race), but is not designed to facilitate post-hoc continuous and
+meaningful edits, such as head angle, hair length, lighting...
+
+\vspace{1em}
 \begin{center}
 \includegraphics[width=0.85\columnwidth]{imgs/ganspace_motivation.png}
 \end{center}
+
+
 
 ---
 
 # Main Contributions
 
-\begin{alertblock}{Core Idea}
-Apply PCA to GAN intermediate activations to discover interpretable editing directions in latent space — \textbf{no supervision required}.
-\end{alertblock}
+- Applying a simple technique (**PCA**) in the latent space of GANs gives
+semantically significant directions.
+- Perturbing inputs in these directions in certain layers of the GANs $\rightarrow$
+interpretable edits in properties of generated images.
+- Such edits are high-level and nuanced (e.g. object shape to background
+landscape)
+- A user need only label each “control direction” once to edit the image
 
-- Works for both **StyleGAN** ($\mathbf{w}$-space) and **BigGAN** (intermediate layers)
-- StyleGAN editing: $\mathbf{w}' = \mathbf{w} + \alpha \mathbf{v}_k$
-- BigGAN editing: $\mathbf{z}' = \mathbf{z} + \mathbf{U}\mathbf{x}$
-- Controls correspond to semantic attributes: pose, lighting, color, shape
+## In plain english
+
+In other words, the authors posit that exploring the “EiGANspace” gives us new controls to edit and possibly better understand GANs at low cost
+
+---
+
+# Main contributions example
+
+\vspace{1em}
+\begin{center}
+\includegraphics[width=0.85\columnwidth]{imgs/contributions_example}
+\end{center}
+
 
 ---
 
 # Background: Generative Adversarial Networks
 
-- **Generator** $G$: maps latent $\mathbf{z}$ to image $G(\mathbf{z})$
-- **Discriminator** $D$: distinguishes real vs. generated images
-- Trained adversarially — generator improves to fool discriminator
+> Seminal Paper: *Goodfellow et al. (2014)*
 
+- **Objective:** Generative Image Modeling—create realistic-looking, artificial
+images that resemble the training data.
+- **GAN** = Generator (G) + Discriminator (D) networks, both CNNs in image
+context.
+    - **Generator** $G$: maps latent $\mathbf{z}$ to image $G(\mathbf{z})$
+    - **Discriminator** $D$: distinguishes real vs. generated images
+
+\vspace{1em}
 \begin{center}
-\includegraphics[width=0.75\columnwidth]{imgs/gan_background.png}
+\includegraphics[width=0.6\columnwidth]{imgs/gan_background.png}
 \end{center}
+
 
 ---
 
