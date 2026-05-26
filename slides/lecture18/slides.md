@@ -442,18 +442,11 @@ Experiment targets: **StyleGAN**, **BigGAN** (methods differed for the models)
 # Paper 2: InterFaceGAN {.plain}
 
 \begin{center}
-\includegraphics[width=0.9\columnwidth]{imgs/paper2_title.png}
+\includegraphics[width=0.75\columnwidth]{imgs/paper2_title.png}
 \end{center}
 
 [@shen2020interfacegan]
 
----
-
-# InterFaceGAN: Roadmap
-
-- Introduction
-- Method
-- Experiments
 
 ---
 
@@ -467,7 +460,7 @@ Experiment targets: **StyleGAN**, **BigGAN** (methods differed for the models)
   - Through adversarial training, the generator learns a mapping from latent space to real images
 
 \begin{center}
-\includegraphics[width=0.7\columnwidth]{imgs/gan_diagram.png}
+\includegraphics[width=0.6\columnwidth]{imgs/gan_diagram.png}
 \end{center}
 
 ---
@@ -478,9 +471,22 @@ Experiment targets: **StyleGAN**, **BigGAN** (methods differed for the models)
   - **GAN inversion**: identifying the latent code for a given image such that the generator could reconstruct it
 - **Semantic editing**: editing the latent code to manipulate some features of the resulting image, such that only the desired features are changed
 
+:::: columns
+::: {.column}
+
 \begin{center}
-\includegraphics[width=0.6\columnwidth]{imgs/latent_code_editing.png}
+\includegraphics[width=\columnwidth]{imgs/latent_code_editing.png}
 \end{center}
+
+:::
+::: {.column}
+
+## In plain English
+
+Instead of editing pixels directly, we edit the latent code — a much lower-dimensional space. Change one coordinate in the right direction and the face ages; change another and it smiles. The challenge is finding those directions, which is exactly what InterFaceGAN addresses.
+
+:::
+::::
 
 ---
 
@@ -492,6 +498,8 @@ Experiment targets: **StyleGAN**, **BigGAN** (methods differed for the models)
     `vector("King") - vector("Man") + vector("Woman") = vector("Queen")`
   - Applications in camera motion, scene synthesis, memorability
 
+\vfill
+
 - **Semantic face editing with GANs**
   - Previous methods required carefully designed loss functions or specialized architectures
   - No existing method to perform controlled facial editing by varying latent codes
@@ -502,8 +510,14 @@ Experiment targets: **StyleGAN**, **BigGAN** (methods differed for the models)
 
 - **How do semantics in the latent space originate, and how are they organized?**
   - Does there exist structure in the latent space relating to disentangled semantic representations?
+
+\vfill
+
 - **What does a GAN actually learn with respect to the latent space?**
   - How does the GAN connect the latent space and the image semantic space?
+
+\vfill
+
 - **How can the latent code be used for image editing?**
   - How are various semantic attributes of an individual's face (gender, age) determined and entangled?
 
@@ -513,8 +527,14 @@ Experiment targets: **StyleGAN**, **BigGAN** (methods differed for the models)
 
 - Proposed **InterFaceGAN**, a framework to identify semantics encoded in the latent space of face synthesis models
   - GANs learn **latent subspaces** corresponding to specific attributes
+
+\vfill
+
 - InterFaceGAN enables **semantic face editing with any pre-trained GAN**
   - Found theoretical and experimental results verifying that linear subspaces align with emerging semantics
+
+\vfill
+
 - Applied InterFaceGAN to **real image editing**
   - Successfully edited attributes of real faces by varying the latent code
 
@@ -522,17 +542,30 @@ Experiment targets: **StyleGAN**, **BigGAN** (methods differed for the models)
 
 # Method: Semantic Subspace
 
-For any binary attribute, define the signed distance from hyperplane $\mathbf{n}$:
+The core assumption: for any binary attribute (e.g., male/female), there exists a hyperplane in latent space that separates the two classes. The signed distance from that hyperplane predicts the attribute score:
 
-$$d(\mathbf{n}, \mathbf{z}) = \mathbf{n}^T \mathbf{z}$$
+$$d(\mathbf{n}, \mathbf{z}) = \mathbf{n}^T\mathbf{z}$$
 
-\begin{alertblock}{Key Hypothesis}
-The generator $g$ satisfies:
+## Key Hypothesis
+
+The semantic score of a generated image is linearly proportional to the distance from the hyperplane:
+
 $$f(g(\mathbf{z})) = \lambda \, d(\mathbf{n}, \mathbf{z})$$
-where $f$ scores the semantic attribute. The hyperplane $\mathbf{n}^T\mathbf{z} = 0$ separates the latent space into two semantic regions.
-\end{alertblock}
 
-In practice, find $\mathbf{n}$ by training a **linear SVM** on labeled latent codes.
+where $f$ scores the attribute and $\lambda > 0$. The hyperplane $\mathbf{n}^T\mathbf{z} = 0$ divides latent space into two semantic regions. In practice, $\mathbf{n}$ is found by training a **linear SVM** on labeled latent codes.
+
+
+---
+
+# Method: Semantic Subspace 
+
+Think of the latent space as a room divided by an invisible wall — on one side are "young" faces, on the other "old" faces. Moving $\mathbf{z}$ perpendicularly across that wall ages the person. InterFaceGAN finds where that wall is.
+
+\vfill
+
+\begin{center}
+\includegraphics[width=0.4\columnwidth]{imgs/smile.png}
+\end{center}
 
 ---
 
@@ -546,31 +579,40 @@ $$\mathbf{n}_1^* = \mathbf{n}_1 - (\mathbf{n}_1^T \mathbf{n}_2)\mathbf{n}_2$$
 \includegraphics[width=0.5\columnwidth]{imgs/interfacegan_subspace_projection.png}
 \end{center}
 
+
 Move along $\mathbf{n}_1^*$ to change $A_1$ while remaining on the hyperplane of $A_2$.
 
 ---
 
 # Experiment 1: Latent Space Separation
 
-**Model**: PGGAN (Progressive Growing GAN) — trained on CelebA-HQ (30K images, 40 attributes)
+- **Model** - PGGAN (for experiment 2 and 3 also)
+  - trained by growing both the generator and discriminator progressively: starting from a low
+    resolution, add new layers that model increasingly fine details as training progresses.
+  - Trained on CelebA-HQ face attributes dataset (each face is labeled with a subset of 40
+    attribute annotations). 30,000 images in total.
 
 \begin{center}
-\includegraphics[width=0.8\columnwidth]{imgs/pggan_architecture.png}
+\includegraphics[width=0.6\columnwidth]{imgs/pggan_architecture.png}
 \end{center}
 
-\begin{block}{Assumption}
-For any binary attribute, there exists a hyperplane in latent space such that all samples from the same side share the same attribute.
-\end{block}
+Train 5 independent linear SVMs on pose, smile, age, gender, eyeglasses. Evaluate on validation set (6K samples) and full set (480K samples).
+
 
 ---
 
 # Experiment 1: Hyperplane Assumption
 
-\begin{center}
-\includegraphics[width=0.55\columnwidth]{imgs/separation_hyperplane.png}
-\end{center}
+The SVM takes latent codes $\mathbf{z}$ as inputs and **CelebA-HQ** attribute labels as targets. The process is:
 
-Train 5 independent linear SVMs on pose, smile, age, gender, eyeglasses. Evaluate on validation set (6K samples) and full set (480K samples).
+1. Sample $N$ random vectors $\mathbf{z}_{1:N}$
+2. Generate the corresponding images $G(\mathbf{z}_{1:N})$
+3. Use a pretrained attribute classifier (e.g., a "young/old" classifier) to label each generated image
+4. Train the SVM on pairs $(\mathbf{z}_i, \text{label}_i)$
+
+- **The SVM never sees pixel**, it learns is a linear boundary in $\mathbb{R}^{512}$ that separates the $\mathbf{z}$'s that generate young faces from those that generate old faces.
+
+- **The key point** is that the attribute classifier converts a question about pixels ("is this face young?") into a label that can be used to supervise the SVM in $\mathbf{z}$-space.
 
 ---
 
@@ -598,11 +640,22 @@ Choose $\mathbf{z}$ far away from and on the decision boundary, then generate fr
 
 Verify whether the semantics found by InterFaceGAN are manipulable.
 
+:::: columns
+::: {.column width="30%"}
+
+- **Single attribute** Generate central image then move away from boundary
+- Works in both positive and negative directions.
+
+:::
+::: {.column width="69%"}
+
 \begin{center}
-\includegraphics[width=0.85\columnwidth]{imgs/interfacegan_single_attr.png}
+\includegraphics[width=\columnwidth]{imgs/interfacegan_single_attr.png}
 \end{center}
 
-Generate central image, then move away from boundary in positive/negative directions. Works for pose, smile, age, gender, eyeglasses.
+:::
+:::::
+
 
 ---
 
@@ -612,17 +665,20 @@ Generate central image, then move away from boundary in positive/negative direct
 \includegraphics[width=0.9\columnwidth]{imgs/interfacegan_distance_effect.png}
 \end{center}
 
-Samples suffer severe appearance changes when moved **too far** from the boundary — extreme samples are unlikely to be drawn from a standard normal distribution.
+- Samples suffer severe appearance changes when moved **too far** from the boundary 
+- extreme samples are **unlikely to be drawn** from a standard normal distribution.
 
 ---
 
 # Experiment 2: Artifacts Correction
 
 \begin{center}
-\includegraphics[width=0.7\columnwidth]{imgs/interfacegan_artifacts.png}
+\includegraphics[width=.5\columnwidth]{imgs/interfacegan_artifacts.png}
 \end{center}
 
+
 Manually labelled 4K bad syntheses (with artifacts), trained a linear SVM to find the separation hyperplane, then moved along the "quality" direction to fix them.
+
 
 ---
 
@@ -631,7 +687,7 @@ Manually labelled 4K bad syntheses (with artifacts), trained a linear SVM to fin
 Study the disentanglement between different attributes.
 
 \begin{center}
-\includegraphics[width=0.85\columnwidth]{imgs/interfacegan_correlation_tables.png}
+\includegraphics[width=\columnwidth]{imgs/interfacegan_correlation_tables.png}
 \end{center}
 
 Attribute correlations (age$\leftrightarrow$gender, age$\leftrightarrow$eyeglasses) reflect those in the training dataset — male older people are more likely to wear eyeglasses.
@@ -641,27 +697,37 @@ Attribute correlations (age$\leftrightarrow$gender, age$\leftrightarrow$eyeglass
 # Experiment 3: Conditional Manipulation Results
 
 \begin{center}
-\includegraphics[width=0.9\columnwidth]{imgs/interfacegan_conditional_results.png}
+\includegraphics[width=0.60\columnwidth]{imgs/interfacegan_conditional_results.png}
 \end{center}
 
-Conditional manipulation preserves the untargeted attribute while editing the targeted one.
+- Conditional manipulation preserves the untargeted attribute while editing the targeted one.
+- To add glasses while preserving age and gender, move along the projected direction — removing the components of $\mathbf{n}_{\text{glasses}}$ that point toward age and gender:
+
+$$\mathbf{n}^* = \mathbf{n}_{\text{glasses}} - (\mathbf{n}_{\text{glasses}}^T \mathbf{n}_{\text{age}})\mathbf{n}_{\text{age}} - (\mathbf{n}_{\text{glasses}}^T \mathbf{n}_{\text{gender}})\mathbf{n}_{\text{gender}}$$
 
 ---
 
 # Experiment 4: Results on StyleGAN
 
-**StyleGAN** extends PGGAN with:
+**StyleGAN** extends PGGAN with four key changes:
 
-| Component | Description |
-|---|---|
-| **Mapping Network** | Casts $\mathbf{z}$ as $\mathbf{w}$ ("style vector") |
-| **Synthesis Network** | Uses style vector + noise via AdaIN |
-| **Bilinear Sampling** | Replaces nearest-neighbor upsampling |
-| **Mixing Regularization** | Uses 2 latent codes to generate |
+:::: columns
+::: {.column width="45%"}
+
+- **Mapping Network:** transforms $\mathbf{z}$ into $\mathbf{w}$ via 8 FC layers — a more disentangled space.
+- **Synthesis Network + AdaIN:** $\mathbf{w}$ controls each layer's style separately via adaptive normalization.
+- **Bilinear Sampling:** smoother upsampling than nearest-neighbor.
+- **Mixing Regularization:** uses two latent codes $\mathbf{w}_1, \mathbf{w}_2$ at different layers, forcing separation between coarse (pose, identity) and fine (texture, color) attributes.
+
+:::
+::: {.column width="55%"}
 
 \begin{center}
-\includegraphics[width=0.65\columnwidth]{imgs/stylegan_architecture.png}
+\includegraphics[width=\columnwidth]{imgs/stylegan_architecture.png}
 \end{center}
+
+:::
+::::
 
 ---
 
@@ -681,26 +747,16 @@ Conditional manipulation preserves the untargeted attribute while editing the ta
 
 Take a real face image → invert to latent code → use InterFaceGAN to edit.
 
-:::: columns
-::: {.column width="50%"}
 **Latent Code Optimization**
-
 Optimize latent code with fixed generator to minimize pixel-wise reconstruction error.
 
 \begin{center}
-\includegraphics[width=0.9\columnwidth]{imgs/interfacegan_real_image.png}
+\includegraphics[width=0.75\columnwidth]{imgs/interfacegan_real_image.png}
 \end{center}
-:::
-::: {.column width="50%"}
-**Encoder-Based**
 
-Extra encoder learns inverse mapping from image to latent code by training with generator and discriminator.
+ **(a)** PGGAN with optimization-based inversion method, **(b)** PGGAN with encoder-based inversion
+method, **(c)** StyleGAN with optimization-based inversion method. 
 
-\begin{center}
-\includegraphics[width=0.9\columnwidth]{imgs/interfacegan_encoder.png}
-\end{center}
-:::
-::::
 
 ---
 
