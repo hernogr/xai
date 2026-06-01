@@ -13,7 +13,7 @@ bibliography: references.bib
 # Paper 1: Do Input Gradients Highlight Discriminative Features?
 
 \begin{center}
-\includegraphics[width=0.9\columnwidth]{imgs/diffroar_title.png}
+\includegraphics[width=0.9\columnwidth]{imgs/Paper-1.png}
 \end{center}
 
 [@shah2021gradients]
@@ -41,7 +41,7 @@ Existing evaluations are often qualitative or rely on synthetic benchmarks — l
 # Assumption (A)
 
 \begin{center}
-\includegraphics[width=0.85\columnwidth]{imgs/diffroar_assumption.png}
+\includegraphics[width=0.85\columnwidth]{imgs/assumption_A.png}
 \end{center}
 
 \begin{definition}{}
@@ -71,28 +71,58 @@ Systematically evaluate whether attribution methods highlight truly discriminati
 
 \begin{columns}
 \begin{column}{0.48\textwidth}
-**Sanity Checks** (Adebayo et al.)
+\small
+\textbf{Sanity Checks} (Adebayo et al.)
 
-- Randomize model weights or labels
-- Attribution must change accordingly
+\begin{itemize}
+\item Randomize model weights or labels
+\item Attribution must change accordingly
+\end{itemize}
 
-**Fidelity-based Evaluation**
+\vspace{0.4em}
 
-- Mask top features, measure accuracy drop
-- Single-pass (no retraining)
+\textbf{Fidelity-based Evaluation}
+
+\begin{itemize}
+\item Mask top features, measure accuracy drop
+\item Single-pass evaluation can induce distribution shift
+\end{itemize}
 \end{column}
 \begin{column}{0.48\textwidth}
-**Adversarial Robustness**
+\small
+\textbf{Adversarial Robustness}
 
-- Attribution fragility under adversarial perturbations
+\begin{itemize}
+\item Robust models can have more visually aligned gradients
+\item The paper asks whether they also satisfy Assumption (A)
+\end{itemize}
 
-\vspace{0.5em}
+\vspace{0.4em}
 
 \begin{alertblock}{Limitation of Prior Work}
-No evaluation establishes whether top-attributed features are truly \textit{discriminative} for model predictions
+Prior tests do not directly compare top-attributed features against bottom-attributed features.
 \end{alertblock}
 \end{column}
 \end{columns}
+
+---
+
+# Why Sanity Checks Are Not Enough
+
+Existing evaluation tools expose different failure modes:
+
+- visual quality can be misleading
+- randomization tests check sensitivity to weights/labels
+- removal tests can create distribution shift
+- ROAR retrains after removing important features
+
+\vspace{0.5em}
+
+\begin{block}{Gap}
+ROAR asks whether top-ranked features matter, but Assumption (A) is comparative: top-ranked features should matter \textit{more than bottom-ranked features}.
+\end{block}
+
+[@adebayo2018sanity; @hooker2019benchmark]
 
 ---
 
@@ -102,73 +132,152 @@ No evaluation establishes whether top-attributed features are truly \textit{disc
 
 # Setting
 
+\small
+
+\begin{itemize}
+\item Standard classification setting: each independently drawn data point is a pair
+$(x^{(i)}, y^{(i)})$ of instance and label.
+\item $x^{(i)}_j$ denotes the $j$th coordinate/feature of $x^{(i)}$.
+\item \textbf{Feature attribution scheme}
+\end{itemize}
+
+\vspace{-0.6em}
+
 \begin{center}
-\includegraphics[width=0.85\columnwidth]{imgs/diffroar_framework.png}
+\fbox{\(\displaystyle A:\mathbb{R}^d \to \{\sigma:\sigma \text{ is a permutation of } [d]\}\)}
 \end{center}
 
-**Pipeline:** train $f$ on $D$ $\to$ compute attribution $A(f,x)$ $\to$ mask top-$k$ or bot-$k$ features $\to$ **retrain** $\to$ measure accuracy
+\vspace{-0.6em}
 
-\begin{alertblock}{Key: Retraining}
-Retraining (not just masking) avoids distribution shift artefacts in the evaluation
-\end{alertblock}
+\begin{itemize}
+\item maps a $d$-dimensional instance $x$ to a permutation of its features.
+\item e.g., \textbf{input gradient attribution scheme} takes input instance $x$ and predicted label $\hat{y}$, then ranks features in decreasing order of input-gradient magnitude.
+\end{itemize}
+
+\vspace{-0.6em}
+
+\begin{center}
+\fbox{\(\displaystyle A(x):[d]\to[d]\)}
+\end{center}
 
 ---
 
 # Unmasking Schemes
 
+\begin{columns}
+\begin{column}{0.45\textwidth}
+\small
+
+\begin{itemize}
+\item \textbf{Unmasked instance} $x^S$ zeroes out all coordinates not in subset $S$.
+\item \textbf{Unmasking scheme} maps instance $x$ to a subset $A(x)$ of coordinates.
+\end{itemize}
+
+\vspace{-0.3em}
+
 \begin{center}
-\includegraphics[width=0.75\columnwidth]{imgs/diffroar_unmasking.png}
+\fbox{\(\displaystyle A:\mathbb{R}^d \to \{S:S\subseteq[d]\}\)}
 \end{center}
 
-Three strategies for replacing masked features:
+\vspace{-0.4em}
 
-- **Random**: replace with random noise
-- **Meaningful**: replace with in-distribution values (e.g., blurred pixel)
-- **Constant**: replace with a fixed value (e.g., zero)
+\begin{itemize}
+\item \textbf{Top-$k$}: preserve the $k$ coordinates with largest attribution scores.
+\item \textbf{Bottom-$k$}: preserve the $k$ coordinates with smallest attribution scores.
+\item All other coordinates are set to zero.
+\end{itemize}
+
+\vspace{-0.2em}
+
+\begin{alertblock}{DiffROAR intuition}
+If the attribution is faithful, top-$k$ should be more predictive than bottom-$k$.
+\end{alertblock}
+
+\end{column}
+\begin{column}{0.53\textwidth}
+\begin{center}
+\includegraphics[width=\columnwidth]{imgs/unmasking_schemes.png}
+\end{center}
+\end{column}
+\end{columns}
 
 ---
 
-# Predictive Power \& DiffROAR Metric
+# Predictive Power
 
-**Predictive Power** ($\text{PredPower}_k$): test accuracy of a model retrained with only the top-$k$ (or bot-$k$) features preserved
+For an unmasking scheme $A$, predictive power is
 
-\begin{definition}{}
-$$\text{DiffROAR} = \text{PredPower}(\text{top-}k) - \text{PredPower}(\text{bot-}k)$$
-\end{definition}
+$$
+\mathrm{PredPower}_M(A)=
+\sup_{f\in M}
+\mathbb{E}_{(x,y)\sim D}
+\left[\mathbf{1}\{f(x^{A(x)})=y\}\right].
+$$
+
+## In plain English
+
+How well can a model of architecture $M$ classify examples if it only sees the features selected by $A$?
+
+- The model is retrained on the masked training set.
+- Retraining reduces artifacts from showing an old model unusual masked inputs.
+- The output is a test accuracy.
+
+--
+
+# DiffROAR Metric
+
+\footnotesize
 
 \begin{center}
-\includegraphics[width=0.65\columnwidth]{imgs/diffroar_metric.png}
+\fbox{
+\begin{minipage}{0.92\textwidth}
+\[
+\mathrm{DiffROAR}_M(A,k)
+=
+\mathrm{PredPower}_M(A^{\mathrm{top}}_k)
+-
+\mathrm{PredPower}_M(A^{\mathrm{bot}}_k)
+\]
+\end{minipage}
+}
 \end{center}
 
-\begin{exampleblock}{Interpretation}
-DiffROAR $\gg 0$: top-$k$ features are more discriminative than bot-$k$ (attribution works) \\
-DiffROAR $\approx 0$: attribution performs at random level
-\end{exampleblock}
+\vspace{0.7em}
+
+\textbf{Interpretation of the metric:}
+
+\begin{itemize}
+\item \textbf{Sign} indicates whether Assumption (A) is satisfied ($>0$) or violated ($<0$).
+\item \textbf{Magnitude} quantifies how strongly the attribution separates most and least discriminative coordinates.
+\item Random attribution should have expected DiffROAR near $0$.
+\end{itemize}
 
 ---
 
 # Experiment 1: Image Classification
 
+The first experiment tests Assumption (A) on standard visual datasets.
+
+- **SVHN:** real-world house-number digits.
+- **FashionMNIST:** clothing images.
+- **CIFAR-10:** small natural images from 10 classes.
+- **ImageNet-10:** reduced ImageNet with 10 super-classes.
+
 ---
 
 # Experimental Setup
 
-\begin{center}
-\includegraphics[width=0.75\columnwidth]{imgs/diffroar_procedure.png}
-\end{center}
-
-**Datasets:** SVHN, FashionMNIST, CIFAR-10, ImageNet-10
-
-**Attribution methods:** Integrated Gradients, Gradient $\times$ Input, SmoothGrad, GradCAM, Random Baseline
-
-**5-step procedure:** train $\to$ attribute $\to$ mask top/bot-$k$ $\to$ retrain $\to$ compute DiffROAR
+- \textbf{Datasets}: SVHN, FashionMNIST, CIFAR-10, and ImageNet-10.
+- \textbf{Models}: standard and adversarially trained two-hidden-layer MLPs and ResNets.
+- \textbf{Adversarial training}: $\ell_2$ and $\ell_\infty$ $\epsilon$-robust models trained with PGD.
+- \textbf{Metric}: DiffROAR across different unmasking fractions $k$.
 
 ---
 
 # Results: Benchmark Datasets
 
 \begin{center}
-\includegraphics[width=0.9\columnwidth]{imgs/diffroar_results.png}
+\includegraphics[width=0.6\columnwidth]{imgs/benchmark_results_experiment_1.png}
 \end{center}
 
 \begin{alertblock}{Surprising Finding}
@@ -177,14 +286,26 @@ Most attribution methods yield DiffROAR $\approx 0$ on standard benchmarks — t
 
 ---
 
+# Results: Benchmark Datasets
+
+\begin{center}
+\includegraphics[width=0.9\columnwidth]{imgs/benchmark_results_experiment_1.png}
+\end{center}
+
+---
+
 # Experiment 2: BlockMNIST
+
+\begin{center}
+\includegraphics[width=0.82\columnwidth]{imgs/block_MNSIT.png}
+\end{center}
 
 ---
 
 # BlockMNIST Dataset
 
 \begin{center}
-\includegraphics[width=0.75\columnwidth]{imgs/diffroar_blockmnist.png}
+\includegraphics[width=0.4\columnwidth]{imgs/block_MNSIT.png}
 \end{center}
 
 - Two MNIST digits placed **side by side**
@@ -194,62 +315,139 @@ Most attribution methods yield DiffROAR $\approx 0$ on standard benchmarks — t
 
 ---
 
-# "Not Always!"
+# Do Gradients Highlight the Signal Block?
+
+---
+
+# Do Gradients Highlight the Signal Block?. Not Always!
 
 \begin{center}
-\includegraphics[width=0.8\columnwidth]{imgs/diffroar_not_always.png}
+\includegraphics[width=0.9\columnwidth]{imgs/not_always_model_gradient_comparisions.png}
 \end{center}
-
-\begin{exampleblock}{On BlockMNIST}
-Attribution methods \textit{can} achieve positive DiffROAR — they appear to correctly identify the relevant digit
-\end{exampleblock}
-
-But... **why** do they work here and not on natural images?
 
 ---
 
 # Feature Leakage Hypothesis
 
+\begin{definition}{}
+\textbf{Feature leakage}: for a given instance, input gradients highlight not only the instance-specific signal, but also locations where signal appears in other instances.
+\end{definition}
+
+\vspace{0.5em}
+
+\begin{itemize}
+\item In BlockMNIST, the signal block can appear at the \textbf{top} or the \textbf{bottom}.
+\item For the current image, only one block contains the digit that determines the label.
+\item Standard gradients may still highlight both locations, because both locations are discriminative somewhere in the dataset.
+\end{itemize}
+
 \begin{center}
-\includegraphics[width=0.78\columnwidth]{imgs/diffroar_feature_leakage.png}
+\includegraphics[width=05\columnwidth]{imgs/not_always_model_gradient_comparisions.png}
 \end{center}
-
-\begin{alertblock}{Feature Leakage}
-In BlockMNIST, relevant and spurious features are \textbf{spatially separated}. Gradients highlight the relevant region simply because the model "looks there" — not because they understand semantics.
-\end{alertblock}
-
-- Success on BlockMNIST reflects **dataset structure**, not method quality
-- This leakage structure can be formalized theoretically
 
 ---
 
-# Theoretical Analysis: Feature Leakage
+# Testing Feature Leakage: BlockMNIST-Top
+
+\begin{columns}
+\begin{column}{0.43\textwidth}
+\small
+
+\begin{itemize}
+\item Fix the signal block at the \textbf{top} for every instance.
+\item Keep the null block at the \textbf{bottom}.
+\item If leakage comes from variable signal location, standard gradients should improve.
+\end{itemize}
+
+\begin{exampleblock}{Result}
+Standard ResNet18 and MLP now highlight the signal block and suppress the null block.
+\end{exampleblock}
+
+\end{column}
+\begin{column}{0.55\textwidth}
+\begin{center}
+\includegraphics[width=\columnwidth]{imgs/feature_leakage_hypothesis.png}
+\end{center}
+\end{column}
+\end{columns}
+
+---
+
+# Simplified BlockMNIST: Theory Setup
+
+\begin{columns}[T]
+\begin{column}{0.56\textwidth}
+\small
+
+To analyze feature leakage formally, the paper replaces images with a block-structured simplified dataset.
+
+\begin{itemize}
+\item Each input $x$ is a concatenation of $d$ blocks.
+\item The first $d/2$ blocks are \textbf{task-relevant}: the signal may appear in any one of them.
+\item For each instance, only one block $j^*(x)$ contains the actual signal for that example.
+\item The remaining $d/2$ blocks are \textbf{noise}: they never contain label information.
+\end{itemize}
+
+\begin{alertblock}{What a faithful gradient should do}
+Highlight the unique signal block $j^*(x)$, not all possible signal locations.
+\end{alertblock}
+
+\end{column}
+\begin{column}{0.40\textwidth}
+\begin{center}
+\includegraphics[width=0.82\columnwidth]{imgs/simplified_blockmnist_dataset.png}
+\end{center}
+\end{column}
+\end{columns}
 
 ---
 
 # Theorem 1: Feature Leakage
 
 \begin{center}
-\includegraphics[width=0.85\columnwidth]{imgs/diffroar_theorem1.png}
+\includegraphics[width=0.98\columnwidth]{imgs/theorem_1_statement.png}
 \end{center}
 
-\begin{block}{Theorem 1 (Informal)}
-If a dataset has a feature leakage structure (relevant and spurious features are linearly separable in input space), then any model trained on it will produce input gradients that concentrate on the relevant features — regardless of whether those features are used for prediction.
-\end{block}
+\footnotesize
+
+\begin{itemize}
+\item There exists a max-margin classifier whose input-gradient magnitude is nonzero on all task-relevant blocks.
+\item But it is \textbf{constant across those blocks}: it does not isolate the unique signal block for the current instance.
+\item On noise blocks, the gradient is zero.
+\end{itemize}
+
+\begin{alertblock}{Meaning}
+This formalizes feature leakage: gradients highlight task-relevant locations that are not specific to the given instance.
+\end{alertblock}
 
 ---
 
-# Empirical Validation
+# Empirical Results: What to Look For
 
+\begin{columns}[T]
+\begin{column}{0.72\textwidth}
 \begin{center}
-\includegraphics[width=0.85\columnwidth]{imgs/diffroar_empirical.png}
+\includegraphics[width=\columnwidth]{imgs/figure5_empirical_results.png}
 \end{center}
+\end{column}
+\begin{column}{0.26\textwidth}
+\scriptsize
 
-- DiffROAR on BlockMNIST **correlates with degree of feature leakage**
-- As relevant/spurious features overlap more (leakage decreases), DiffROAR drops
-- Confirms the theoretical prediction
+\begin{itemize}
+\item All models get \textbf{100\% test accuracy} on this simplified dataset.
+\item Linear model: marks all task-relevant coordinates.
+\item Standard MLP: still marks all possible signal locations.
+\item Robust MLP: marks the instance-specific signal coordinate.
+\end{itemize}
 
-[@shah2021gradients]
+\vspace{1.4em}
+
+\begin{exampleblock}{Key point}
+Prediction can be perfect while the explanation is not instance-specific.
+\end{exampleblock}
+
+\end{column}
+\end{columns}
 
 ---
 
@@ -288,22 +486,30 @@ Feature leakage explains apparent successes:
 # Paper 2: On the Privacy Risks of Algorithmic Recourse
 
 \begin{center}
-\includegraphics[width=0.9\columnwidth]{imgs/privacy_title.png}
+\includegraphics[width=0.92\columnwidth]{imgs/privacy_title.png}
 \end{center}
-
-[@pawelczyk2022privacy]
 
 ---
 
 # Privacy Risks in XAI
+
+\small
 
 \begin{alertblock}{Central Question}
 Can XAI mechanisms — specifically \textbf{algorithmic recourse} — leak private information about training data?
 \end{alertblock}
 
 \begin{center}
-\includegraphics[width=0.75\columnwidth]{imgs/privacy_motivation.png}
+\includegraphics[width=0.62\columnwidth]{imgs/privacy_motivation.png}
 \end{center}
+
+\vspace{-0.6em}
+
+\footnotesize
+\begin{itemize}
+\item XAI outputs are information channels: they can reveal more than the intended explanation.
+\item This paper focuses on whether recourse can leak \textbf{training-set membership}.
+\end{itemize}
 
 ---
 
@@ -321,8 +527,8 @@ $$x' = \arg\min_{x' \in \mathcal{A}^p} \ell(f_\theta(x'), 1) + \lambda \cdot c(x
 \textbf{CFD (Counterfactual Distance):} $c(x, x')$ — distance from input $x$ to its recourse $x'$
 \end{definition}
 
-\begin{block}{Key Observation}
-The CFD output by recourse algorithms may reveal whether $x$ was in the training set
+\begin{block}{Why CFD matters}
+The recourse algorithm outputs not only a counterfactual $x'$, but also a distance $c(x,x')$ that can be used as a statistic.
 \end{block}
 
 ---
@@ -330,19 +536,25 @@ The CFD output by recourse algorithms may reveal whether $x$ was in the training
 # Previous Works
 
 \begin{center}
-\includegraphics[width=0.72\columnwidth]{imgs/privacy_mi_attribution.png}
+\includegraphics[width=0.68\columnwidth]{imgs/privacy_mi_attribution.png}
 \end{center}
 
-\begin{columns}
+\small
+
+\begin{columns}[T]
 \begin{column}{0.48\textwidth}
-**MI via Feature Attribution**
-- Shokri et al.: attribute $\to$ infer membership
-- Requires **multiple queries**
+\textbf{MI via Feature Attribution}
+\begin{itemize}
+\item Shokri et al.: attribute $\to$ infer membership
+\item Requires \textbf{multiple queries}
+\end{itemize}
 \end{column}
 \begin{column}{0.48\textwidth}
-**Model Extraction via Counterfactuals**
-- Repeated counterfactual queries
-- Also requires **many queries**
+\textbf{Model Extraction via Counterfactuals}
+\begin{itemize}
+\item Repeated counterfactual queries
+\item Also requires \textbf{many queries}
+\end{itemize}
 
 \begin{alertblock}{Limitation}
 Prior attacks assume multiple queries — impractical for real recourse systems
@@ -369,14 +581,44 @@ First \textbf{single-query} membership inference (MI) attack using counterfactua
 
 # MI Attacks: Background
 
-**Classic Membership Inference:**
+\begin{block}{Attack objective}
+Given a target instance, decide whether it belonged to the model owner's training set.
+\end{block}
 
-- $M_\text{Loss}$: MEMBER if $\ell(f(x), y) < \tau$ \quad (training samples have lower loss)
-- **Loss LRT** (Carlini et al.): likelihood ratio test using shadow models — more powerful
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+\textbf{Loss Thresholding}
+
+\begin{itemize}
+\item Training samples often have lower loss than test samples
+\item $M_\text{Loss}$ predicts MEMBER when $\ell(f(x),y)$ is below a threshold
+\end{itemize}
+\end{column}
+\begin{column}{0.48\textwidth}
+\textbf{Loss LRT}
+
+\begin{itemize}
+\item Uses shadow models to estimate loss/confidence distributions
+\item Predicts membership by comparing likelihoods
+\item More powerful than simple thresholding
+\end{itemize}
+\end{column}
+\end{columns}
+
+---
+
+# Attack Assumptions
 
 \begin{center}
-\includegraphics[width=0.72\columnwidth]{imgs/privacy_mi_game.png}
+\includegraphics[width=0.78\columnwidth]{imgs/privacy_attack_assumptions.png}
 \end{center}
+
+\begin{exampleblock}{Important Distinction}
+Recourse-based attacks do not require true labels, the model loss, or direct query access to the predictive model.
+\end{exampleblock}
+
+- CFD attacks need access to the recourse system $\mathcal{R}$
+- CFD LRT additionally assumes sample access to the data distribution $\mathcal{D}^N$
 
 ---
 
@@ -401,22 +643,27 @@ The adversary can only query the recourse system \textbf{once} per sample — ma
 
 # Intuition: Why CFD Works
 
+\footnotesize
+
 \begin{center}
-\includegraphics[width=0.78\columnwidth]{imgs/privacy_intuition.png}
+\includegraphics[width=0.54\columnwidth]{imgs/privacy_intuition.png}
 \end{center}
+
+\vspace{-0.5em}
 
 \begin{block}{Intuition}
 Training samples tend to be \textbf{further from the decision boundary} (the model fits them well). Their counterfactuals require a larger shift $\Rightarrow$ larger CFD.
 \end{block}
 
-\begin{columns}
-\begin{column}{0.48\textwidth}
+\vspace{-0.4em}
+
+\begin{center}
+\begin{tabular}{@{}p{0.45\textwidth}p{0.45\textwidth}@{}}
 MEMBER $\to$ large CFD (far from boundary)
-\end{column}
-\begin{column}{0.48\textwidth}
+&
 NON-MEMBER $\to$ small CFD (closer to boundary)
-\end{column}
-\end{columns}
+\end{tabular}
+\end{center}
 
 ---
 
@@ -433,34 +680,59 @@ $$M_\text{Distance}(x) = \begin{cases} \text{MEMBER} & \text{if } c(x, x') \geq 
 
 ---
 
-# Attack 2: CFD Likelihood Ratio Test
+# Attack 2: CFD LRT Intuition
+
+\begin{block}{LRT idea}
+Use counterfactual distance as the statistic, then ask whether the observed CFD looks likely under member vs.\ non-member behavior.
+\end{block}
+
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+\textbf{Full likelihood ratio}
+
+$$
+\Lambda =
+\frac{\Pr[c(x,x') \mid x \in D_t]}
+{\Pr[c(x,x') \mid x \notin D_t]}
+$$
+
+\begin{itemize}
+\item Inspired by loss-based LRT attacks
+\item Uses recourse distance instead of model loss
+\end{itemize}
+\end{column}
+\begin{column}{0.48\textwidth}
+\textbf{Practical one-sided version}
+
+\begin{itemize}
+\item Exact member likelihood is computationally expensive
+\item Estimate the non-member CFD distribution using shadow models
+\item Test the observed CFD against a threshold for target FPR $\alpha$
+\end{itemize}
+\end{column}
+\end{columns}
+
+---
+
+# Attack 2: CFD LRT Algorithm
 
 \begin{center}
-\includegraphics[width=0.85\columnwidth]{imgs/privacy_cfd_lrt.png}
+\includegraphics[width=0.82\columnwidth]{imgs/privacy_cfd_lrt.png}
 \end{center}
 
-**Algorithm (CFD LRT):**
-
-1. Train $k$ **shadow models** on random subsets of a reference dataset
-2. Estimate $\hat{\mu}_\text{in}, \hat{\sigma}^2_\text{in}$ (member CFD distribution) via MLE
-3. Estimate $\hat{\mu}_\text{out}, \hat{\sigma}^2_\text{out}$ (non-member CFD distribution) via MLE
-4. Compute LRT statistic; threshold at $z_{1-\alpha}$
-
 \begin{exampleblock}{Advantage}
-Leverages distributional information from shadow models — more powerful than simple thresholding
+Leverages distributional information from shadow models — more powerful than simple thresholding in higher-dimensional settings
 \end{exampleblock}
 
 ---
 
 # Privacy Bounds via Differential Privacy
 
-\begin{center}
-\includegraphics[width=0.78\columnwidth]{imgs/privacy_dp_theorem.png}
-\end{center}
+\vspace{0.8em}
 
 \begin{block}{Theorem 1}
 If the model training mechanism is $\varepsilon$-DP, then for any MI adversary $\mathcal{A}$:
-$$\text{BA}_\mathcal{A} \leq \frac{1}{2} + \frac{1 - e^{-\varepsilon}}{2}$$
+$$\text{BA}_{\mathcal{A}} \leq \frac{1}{2} + \frac{1 - e^{-\varepsilon}}{2}$$
 \end{block}
 
 \begin{alertblock}{DP is Not a Silver Bullet}
@@ -471,36 +743,66 @@ Small $\varepsilon$ bounds adversary success — but significantly degrades reco
 
 # Experimental Setup
 
-\begin{columns}
-\begin{column}{0.48\textwidth}
-**Datasets:**
+\small
 
-- Adult (income prediction)
-- HELOC (credit risk)
-- Diabetes
-- Synthetic (controlled)
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+\textbf{Datasets:}
+
+\begin{itemize}
+\item Adult (income prediction)
+\item HELOC (credit risk)
+\item Diabetes
+\item Synthetic (controlled)
+\end{itemize}
 \end{column}
 \begin{column}{0.48\textwidth}
-**Recourse Methods:**
+\textbf{Recourse Methods:}
 
-- SCFE
-- GS (Growing Spheres)
-- CCHVAE
+\begin{itemize}
+\item SCFE
+\item GS (Growing Spheres)
+\item CCHVAE
+\end{itemize}
 
-**Baselines:** $M_\text{Loss}$ threshold, Loss LRT
+\textbf{Baselines:} $M_\text{Loss}$ threshold, Loss LRT
 \end{column}
 \end{columns}
 
 ---
 
-# Attack Efficiency: ROC Curves
+# Attack Efficiency: ROC Curves (SCFE)
 
 \begin{center}
-\includegraphics[width=0.85\columnwidth]{imgs/privacy_roc.png}
+\includegraphics[width=0.96\columnwidth]{imgs/privacy_roc_scfe.png}
+\end{center}
+
+\begin{block}{How to read}
+Curves above the random diagonal indicate membership signal at that false-positive rate.
+\end{block}
+
+---
+
+# Attack Efficiency: ROC Curves (GS)
+
+\begin{center}
+\includegraphics[width=0.96\columnwidth]{imgs/privacy_roc_gs.png}
+\end{center}
+
+\begin{block}{How to read}
+The low-FPR region is especially important: even a small high-confidence leakage can be privacy-relevant.
+\end{block}
+
+---
+
+# Attack Efficiency: ROC Curves (CCHVAE)
+
+\begin{center}
+\includegraphics[width=0.78\columnwidth]{imgs/privacy_roc_cchvae.png}
 \end{center}
 
 \begin{exampleblock}{Key Takeaway}
-CFD LRT consistently outperforms CFD Thresholding and $M_\text{Loss}$ baseline — counterfactual distances carry \textbf{strong membership signal}
+CFD LRT is often above the random baseline, especially on HELOC — counterfactual distances can carry membership signal.
 \end{exampleblock}
 
 ---
@@ -508,7 +810,7 @@ CFD LRT consistently outperforms CFD Thresholding and $M_\text{Loss}$ baseline �
 # Effect of Feature Dimensionality
 
 \begin{center}
-\includegraphics[width=0.8\columnwidth]{imgs/privacy_num_features.png}
+\includegraphics[width=0.6\columnwidth]{imgs/privacy_num_features.png}
 \end{center}
 
 \begin{alertblock}{Finding}
@@ -522,7 +824,7 @@ More features $\to$ richer counterfactual signal $\to$ more distinguishable CFD 
 # Effect of Model Architecture
 
 \begin{center}
-\includegraphics[width=0.8\columnwidth]{imgs/privacy_model_arch.png}
+\includegraphics[width=0.6\columnwidth]{imgs/privacy_model_arch.png}
 \end{center}
 
 \begin{alertblock}{Finding}
@@ -535,20 +837,24 @@ Complex models memorize training data more strongly $\to$ larger margin for trai
 
 # Conclusion: Privacy Risks
 
-\begin{columns}
+\begin{columns}[T]
 \begin{column}{0.48\textwidth}
-**Novel Attacks**
+\textbf{Novel Attacks}
 
-- Leverage recourses to infer training data membership
-- MI attacks using counterfactual distances (**CFD**)
-- \textbf{Single-query} — practical threat model
+\begin{itemize}
+\item Leverage recourses to infer training data membership
+\item MI attacks using counterfactual distances (\textbf{CFD})
+\item \textbf{Single-query} — practical threat model
+\end{itemize}
 \end{column}
 \begin{column}{0.48\textwidth}
-**Evidence of Privacy Leakage**
+\textbf{Evidence of Privacy Leakage}
 
-- Recourse algorithms carry membership signal
-- \textbf{Explainability-privacy tradeoff} is real
-- Attacks effective across diverse domains (lending, healthcare, law)
+\begin{itemize}
+\item Recourse algorithms carry membership signal
+\item \textbf{Explainability-privacy tradeoff} is real
+\item Attacks effective across diverse domains (lending, healthcare, law)
+\end{itemize}
 \end{column}
 \end{columns}
 
