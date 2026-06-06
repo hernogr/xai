@@ -1,5 +1,6 @@
 ---
-title: "\\emoji{balance-scale} XAI: Explainability for Fairness \\& the Right to be Forgotten"
+title: "\\emoji{wtf} XAI Lecture 20"
+subtitle: "Explainability for Fair ML \\& Robust Counterfactuals under the Right to be Forgotten"
 bibliography: references.bib
 
 ---
@@ -10,527 +11,836 @@ bibliography: references.bib
 
 ---
 
-# Paper 1: Explainability for Fair Machine Learning
+# Paper 1
 
 \begin{center}
-\includegraphics[width=0.9\columnwidth]{imgs/fairml_title.png}
+\includegraphics[width=0.7\columnwidth]{imgs/paper1.png}
 \end{center}
+
 
 [@begley2020explainability]
 
 ---
 
-# Fair Machine Learning
+# Introduction + Motivation
 
-\begin{center}
-\includegraphics[width=0.75\columnwidth]{imgs/fairml_history.png}
-\end{center}
+**The core tension in fair ML**
 
-- Rapid growth of fairness research since 2015 — now a major concern
-- Yet: many competing, often **incompatible** definitions
-- And: fairness guarantees can be **gamed** by explanation manipulation
+:::: {.columns}
+::: {.column width="50%"}
 
----
+\vspace{1em}
 
-# Challenges: Defining Fairness
+- ML models make high-stakes decisions affecting individuals
+- **Detecting unfairness is non-trivial**: many competing definitions exist
+- Existing XAI tools **do not reliably indicate** whether a model is fair
+- Using explainability to validate fairness can be misleading
 
-**Defining fairness is hard:**
+:::
+::: {.column width="48%"}
 
-- Many competing definitions — statistics-based, causal-reasoning-based, etc.
-- Group outcomes vs.\ individual outcomes
-- Requires contextual understanding
-
-\begin{center}
-\includegraphics[width=0.65\columnwidth]{imgs/fairml_challenges_table.png}
-\end{center}
-
-\begin{alertblock}{No universal definition}
-Definitions often incompatible — satisfying one can violate another
+\begin{alertblock}{Central Questions}
+\begin{enumerate}
+\item Can XAI tools detect unfairness?
+\item Can we \textbf{attribute} unfairness to individual features?
+\item Can we use that attribution to \textbf{intervene} modularly?
+\end{enumerate}
 \end{alertblock}
 
+:::
+::::
+
+
 ---
 
-# Fairness Definition: Demographic Parity
+# Fairness Definitions: Examples
+
+**Demographic parity:** $f(x)$ is unconditionally independent of sensitive attribute $a$
+
+- If 100 female and 100 male students apply to Harvard, parity is achieved if the admission rate is equal for both groups, regardless of average qualification.
+
+**Equalized odds:** $f(x)$ is independent of $a$ given $y$
+
+- Qualified female and male applicants have the same probability of admission; same for unqualified applicants.
+
+:::: {.columns}
+::: {.column width="44%"}
 
 \begin{center}
-\includegraphics[width=0.8\columnwidth]{imgs/fairml_demographic_parity.png}
+\textbf{Group A (Female)}
 \end{center}
-
-\begin{definition}{}
-\textbf{Demographic parity:} $f(x)$ must be unconditionally independent of sensitive attribute $a$
-\end{definition}
-
-**Example:** if 100 female and 100 male students apply to Harvard, demographic parity requires the **same admission percentage** for both groups — regardless of average qualification.
-
----
-
-# Fairness Definition: Equalized Odds
 
 \begin{center}
-\includegraphics[width=0.85\columnwidth]{imgs/fairml_equalized_odds.png}
+\begin{tabular}{l|cc}
+ & \textbf{Qualified} & \textbf{Unqualified} \\
+\hline
+\textbf{Admitted}  & 45 & 2  \\
+\textbf{Rejected}  & 45 & 8  \\
+\hline
+\textbf{Total}     & 90 & 10 \\
+\end{tabular}
 \end{center}
 
-\begin{definition}{}
-\textbf{Equalized odds:} $f(x)$ must be independent of sensitive attribute $a$ \textbf{given} $y$
-\end{definition}
+:::
+::: {.column width="12%"}
 
-Qualified and unqualified applicants have the same acceptance/rejection rates across groups — regardless of base rates.
+\vspace{3em}
+\begin{center}
+{\color{darkgreen}\Huge $\checkmark$}
+\end{center}
 
----
-
-# Challenge: Explanation Methods Can Be Manipulated
+:::
+::: {.column width="44%"}
 
 \begin{center}
-\includegraphics[width=0.85\columnwidth]{imgs/fairml_manipulation.png}
+\textbf{Group B (Male)}
 \end{center}
 
-\begin{alertblock}{Problem (Dimanov, ECAI 2020)}
-An explanation attack can mask a model's discriminatory use of a sensitive feature \textbf{without hurting accuracy} — fooling Gradients, SHAP, LIME, and other methods simultaneously
-\end{alertblock}
+\begin{center}
+\begin{tabular}{l|cc}
+ & \textbf{Qualified} & \textbf{Unqualified} \\
+\hline
+\textbf{Admitted}  & 5  & 18 \\
+\textbf{Rejected}  & 5  & 72 \\
+\hline
+\textbf{Total}     & 10 & 90 \\
+\end{tabular}
+\end{center}
+
+:::
+::::
+
+
 
 ---
 
-# Proposed Solution
+# The Explanation Attack
 
-\begin{exampleblock}{Unified approach via Fairness Shapley Values}
-A single framework covering many group-fairness criteria:
-\begin{itemize}
-\item demographic parity, equalised odds, conditional demographic parity
-\item for each fairness definition, define a Shapley value function that attributes overall unfairness to individual features
-\end{itemize}
-\end{exampleblock}
+:::: {.columns}
+::: {.column width="45%"}
+
+\vspace{1em}
+
+Explanation methods can be **manipulated**. 
+
+\vspace{.5em}
+
+An explanation attack can easily mask a model's disciminatory use of a sensitive feature without hurting accuracy [@dimanov2020shouldnt].
+
+\vspace{.5em}
+
+\begin{flushright}
+{\small\textit{\textcolor{gray}{Importance ranking histograms for gender as the sensitive feature on the adult test set of original (left) and modified (right) models}}}
+\end{flushright}
+\par
+
+
+\vfill
+
+:::
+::: {.column width="52%"}
+
+\begin{center}
+\includegraphics[width=\linewidth]{imgs/explanation_attack.png}
+\end{center}
+
+:::
+::::
+
+## Key Gap
+
+If explanations can be manipulated, they cannot serve as evidence of fairness.
+Begley et al.'s solution: Fairness Shapley Values **must sum** to the chosen fairness metric --- manipulation is impossible without changing the metric itself.
+
+---
+
+# Background: Shapley Values
+
+**Cooperative game theory $\rightarrow$ feature attribution**
+
+$$\phi_v(i) = \sum_{S \subseteq N \smallsetminus \{i\}} \frac{|S|!\,(n - |S| - 1)!}{n!} \left[ v(S \cup \{i\}) - v(S) \right]$$
+
+:::: {.columns}
+::: {.column width="50%"}
+
+\footnotesize
+
+| Symbol | Meaning |
+|--------|---------|
+| $\phi_v(i)$ | Shapley value of feature $i$ |
+| $N$ | Set of all features |
+| $S \subseteq N \smallsetminus \{i\}$ | Coalition not containing $i$ |
+
+:::
+::: {.column width="50%"}
+
+\footnotesize
+
+| Symbol | Meaning |
+|--------|---------|
+| $v(S)$ | Value of coalition $S$ |
+| $v(S \cup \{i\}) - v(S)$ | Marginal contribution of $i$ to $S$ |
+| $\frac{\vert S\vert!(n-\vert S\vert-1)!}{n!}$ | Weighting over all orderings |
+
+:::
+::::
+
+## In Plain English
+
+The Shapley value of feature $i$ is its **average marginal contribution** when added to every possible coalition of other features --- a fair division of the outcome among all participants.
+
+
+---
+
+# Fair Machine Learning - Proposed Solution
+
+- A **unified** approach that works for many **group-fairness** criteria
+    - demographic parity, equalised odds, conditional demographic parity
+    - for each definition, choose Shapley value functions that attribute overall fairness to individual features.
+
+\vspace{2em}
 
 - **Cannot hide unfairness** by manipulating explanations
-  - Fairness Shapley values must collectively sum to the chosen fairness metric
-- **Meta Algorithm**: learn a corrective perturbation $\delta_\theta$ to the original model — no full retraining needed
-
-[@begley2020explainability]
-
----
-
-# Methodology
+    - Fairness Shapley values collectively must sum to the chosen fairness metric
 
 ---
 
 # Explaining Model Accuracy
 
-\begin{center}
-\includegraphics[width=0.85\columnwidth]{imgs/fairml_accuracy_shapley.png}
-\end{center}
+\small
+\setlength{\abovedisplayskip}{2pt}
+\setlength{\belowdisplayskip}{2pt}
+\setlength{\abovedisplayshortskip}{0pt}
+\setlength{\belowdisplayshortskip}{0pt}
 
-- Shapley value $\phi_v(i)$ attributes the total value $v(N)$ to feature $i$
-- Value function marginalises over out-of-coalition features: $v_{f_y(x)}(S) = \mathbb{E}_{p(x')}[f_y(x_S \sqcup x'_{N\setminus S})]$
-- Global Shapley: $\Phi_f(i) = \mathbb{E}_{p(x,y)}[\phi_{f_{y(x)}}(i)]$
-- Sum: $\sum_i \Phi_f(i) = \mathbb{E}_{p(x,y)}[f_y(x)] - \mathbb{E}_{p(x')p(y)}[f_y(x')]$
+- Shapley value $\phi_v(i)$ attributes a portion to player $i$:
+$$\phi_v(i) = \sum_{S \subseteq N \smallsetminus \{i\}} \frac{|S|!\,(n - |S| - 1)!}{n!} \left[ v(S \cup \{i\}) - v(S) \right] \tag{1}$$
+
+\vspace{.5em}
+
+- Binary classification problem:
+$$f_y(x) = (1-y)(1-f(x)) + y\,f(x) \tag{2}$$
+
+\vspace{.5em}
+
+- Value function by marginalising over out-of-coalition features:
+$$v_{f_y(x)}(S) = \mathbb{E}_{p(x')}\!\left[f_y(x_S \cup x'_{N \smallsetminus S})\right] \tag{3}$$
+
+\vspace{.5em}
+
+- Global explanation of model performance:
+$$\Phi_f(i) = \mathbb{E}_{p(x,y)}\!\left[\phi_{f_y(x)}(i)\right] \tag{4}$$
+
+---
+
+# Explaining Model Accuracy (cont)
+
+- Aggregating global Shapley values:
+
+$$\sum_i \Phi_f(i) = \underbrace{\mathbb{E}_{p(x,y)}\!\left[f_y(x)\right]}_{\substack{\scriptsize\text{Expected accuracy for a} \\ \scriptsize\text{model which samples a} \\ \scriptsize\text{predicted label according} \\ \scriptsize\text{to the predicted probability}}} - \underbrace{\mathbb{E}_{p(x')p(y)}\!\left[f_y(x')\right]}_{\substack{\scriptsize\text{The accuracy that is not} \\ \scriptsize\text{attributable to any of the} \\ \scriptsize\text{features and is related to the} \\ \scriptsize\text{class balance}}} \tag{5}$$
+
+## In Plain English
+
+Total accuracy decomposes as a sum of individual feature contributions, with a baseline term capturing class imbalance.
 
 ---
 
 # Explaining Model Fairness
 
-\begin{center}
-\includegraphics[width=0.85\columnwidth]{imgs/fairml_fairness_shapley.png}
-\end{center}
+\small
+\setlength{\abovedisplayskip}{1pt}
+\setlength{\belowdisplayskip}{1pt}
+\setlength{\abovedisplayshortskip}{0pt}
+\setlength{\belowdisplayshortskip}{0pt}
 
-New value function capturing fairness (for **demographic parity**):
+- To explain fairness, define a new value function that captures this effect :
 
-$$g_a(x) = f(x) \cdot \frac{(-1)^a}{p(a)} \qquad a: \text{sensitive attribute}$$
+:::: {.columns}
+::: {.column width="40%"}
 
-$$\sum_i \Phi_g(i) = \int dx\, p(x|a{=}0)\, f(x) - \int dx\, p(x|a{=}1)\, f(x)$$
+\vspace{.5em}
+\begin{flushright}
+{\footnotesize\textit{Demographic parity calls for $f(x)$ to be unconditionally independent of $a$}}
+\end{flushright}
 
-Each feature's Fairness Shapley value = its marginal contribution to overall demographic disparity
+:::
+::: {.column width="60%"}
+
+$$g_a(x) = f(x) \cdot \frac{(-1)^a}{p(a)}, \qquad a: \text{sensitive attribute} \tag{6}$$
+
+:::
+::::
+
+- The value function on coalitions is defined through marginalisation:
+
+:::: {.columns}
+::: {.column width="50%"}
+
+$$v_{g_a(x)}(S) = \mathbb{E}_{p(x')}\!\left[g_a(x_S \cup x'_{N \smallsetminus S})\right] \tag{7}$$
+
+:::
+::: {.column width="50%"}
+
+$$\Phi_g(i) = \mathbb{E}_{p(x,a)}\!\left[\phi_{g_a(x)}(i)\right] \tag{8}$$
+
+:::
+::::
+
+\vspace{.2em}
+- Each feature's marginal contribution to the overall demographic disparity:
+$$\sum_i \Phi_g(i) = \int dx\, p(x|a=0)\,f(x) - \int dx\, p(x|a=1)\,f(x) \tag{9}$$
+
+## In Plain English
+
+Each feature receives a share of the model's **total demographic disparity**. The sum of all Fairness Shapley Values equals exactly the chosen fairness metric --- it cannot be manipulated without changing the metric.
 
 ---
 
 # Learning Corrective Perturbations
 
-\begin{center}
-\includegraphics[width=0.85\columnwidth]{imgs/fairml_perturbation.png}
-\end{center}
+\small
+\setlength{\abovedisplayskip}{3pt}
+\setlength{\belowdisplayskip}{3pt}
+\setlength{\abovedisplayshortskip}{0pt}
+\setlength{\belowdisplayshortskip}{0pt}
 
-By the **linearity axiom** of Shapley values, the fairness Shapley values of $f_\theta = f + \delta_\theta$ are the linear combination of Shapley values of $f$ and $\delta_\theta$.
+The **linearity axiom** of Shapley values guarantees that fairness Shapley values of a linear ensemble are the corresponding linear combination of the underlying models' values.
 
-$$f_\theta = f + \delta_\theta \qquad \delta_\theta(f(x), x, a) = \sigma\!\left(\sigma^{-1}(f(x)) + \tilde{\delta}_\theta(f(x), x, a)\right) - f(x)$$
+This motivates learning an additive perturbation to the original model:
+\vspace{-0.8em}
 
-- $\tilde{\delta}_\theta$: any training-time fairness algorithm (e.g., Agarwal et al. 2018)
-- Only the perturbation is retrained — the original model stays fixed
+$$f_\theta = f + \delta_\theta$$
 
----
+\vspace{-0.5em}
 
-# Experiments \& Results
+$$\delta_\theta(f(x), x, a) = \sigma\!\left(\sigma^{-1}(f(x)) + \tilde{\delta}_\theta(f(x), x, a)\right) - f(x)$$
 
----
+\vspace{-0.5em}
+\footnotesize
 
-# Datasets
+| Symbol | Meaning |
+|--------|---------|
+| $f$ | Original model (black box) |
+| $\tilde{\delta}_\theta$ | Any training-time fairness algorithm |
+| $f_\theta$ | Corrected model |
 
-\begin{columns}
-\begin{column}{0.48\textwidth}
-**Adult Dataset** (UCI)
+\normalsize
 
-*Task:* predict whether an individual earns more than \$50K/year based on demographics
+\vspace{-0.5em}
 
-**Sensitive attribute:** sex
-\end{column}
-\begin{column}{0.48\textwidth}
-**COMPAS Recidivism Dataset** (Larson et al., 2016)
+## In Plain English
 
-*Task:* predict recidivism risk based on demographics
-
-**Sensitive attribute:** race
-\end{column}
-\end{columns}
-
----
-
-# Explainability Results
-
-\begin{center}
-\includegraphics[width=0.9\columnwidth]{imgs/fairml_explainability_plots.png}
-\end{center}
-
-- **Top row:** accuracy Shapley values; **Bottom row:** fairness Shapley values
-- Key contributors to unfairness: **marital status**, **sex**, **relationship**
-- After correction: fairness Shapley values near zero while accuracy is maintained
-
----
-
-# Robustness of Fairness Explanation
-
-\begin{center}
-\includegraphics[width=0.8\columnwidth]{imgs/fairml_robustness.png}
-\end{center}
-
-\begin{block}{Experiment: Suppress sex feature importance}
-Suppressing sex in accuracy Shapley values: Demographic Parity Difference $0.193 \to 0.184$
-\end{block}
-
-Fairness Shapley values reveal the true sources of unfairness — manipulation of accuracy explanations cannot hide the fairness impact.
-
----
-
-# Learnt Perturbations: Performance
-
-\begin{columns}
-\begin{column}{0.48\textwidth}
-\begin{center}
-\includegraphics[width=\columnwidth]{imgs/fairml_perf_dp.png}
-\end{center}
-\textbf{Demographic Parity:} No significant accuracy reduction while imposing fairness constraint
-\end{column}
-\begin{column}{0.48\textwidth}
-\begin{center}
-\includegraphics[width=\columnwidth]{imgs/fairml_perf_eo.png}
-\end{center}
-\textbf{Equalised Odds:} Same result — perturbative approach competitive with full retraining
-\end{column}
-\end{columns}
-
----
-
-# Learnt Perturbations: Stability
-
-\begin{center}
-\includegraphics[width=0.8\columnwidth]{imgs/fairml_stability.png}
-\end{center}
-
-\begin{exampleblock}{Advantage of perturbative approach}
-Less variance and higher mean accuracy compared to Zhang et al. and Adel et al. across all fairness levels
-\end{exampleblock}
-
-Model-agnostic: structure/access requirements apply only to the perturbation, not the original model.
-
----
-
-# Discussion Questions: Fair ML
-
-1. What are the advantages and disadvantages of the perturbation method vs.\ other training-time fairness algorithms?
-2. If a feature contributes greatly to unfairness (e.g., marital status in demographic parity), is it always correct to remove it from the model?
-3. After reading this paper, what is your opinion on using interpretability methods to **validate** the fairness of ML models?
-
-[@begley2020explainability]
-
----
-
-# Paper 2: Towards Bridging the Gaps between the Right to Explanation and the Right to be Forgotten
-
-\begin{center}
-\includegraphics[width=0.85\columnwidth]{imgs/rocerf_title.png}
-\end{center}
-
-[@krishna2022rocerf]
-
----
-
-# Two Competing Rights
-
-\begin{columns}
-\begin{column}{0.48\textwidth}
-\textbf{Right to an Explanation}
-
-Given a model prediction, provide a reason — via Algorithmic Recourse (counterfactuals)
-
-\vspace{0.5em}
-Prior work: Multi-Objective CFE (Dandel et al. 2020), MACE (Karimi et al. 2020)
-\end{column}
-\begin{column}{0.48\textwidth}
-\textbf{Right to be Forgotten}
-
-User can ask to have personal data removed from databases and models
-
-\vspace{0.5em}
-Prior work: Descent-to-delete (Neel et al. 2021), Approximate deletion (Izzo et al. 2021)
-\end{column}
-\end{columns}
-
-\begin{alertblock}{The Conflict}
-Forgetting $\Rightarrow$ Model changes $\Rightarrow$ Counterfactual explanation becomes invalid $\Rightarrow$ Right to explanation not met
-\end{alertblock}
-
----
-
-# Previous Work \& Motivation
-
-- **Pawelczyk et al.\ 2022**: identified the tradeoff between right to explanation and right to be forgotten
-  - Trade-off stems from the fact that current explanation methods ignore underlying model changes
-- **ROAR** (Upadhyay et al.\ 2021): methods that assume certain model changes
-  - But: we can't know *exactly* how a model changes as a result of forgetting
-- Pawelczyk et al.\ highlighted the problem — there is a need for a **solution**
-
-\begin{exampleblock}{This Paper}
-ROCERF: first algorithmic framework to address this tradeoff, with theoretical guarantees
-\end{exampleblock}
-
----
-
-# Contributions
-
-\begin{exampleblock}{ROCERF: \textbf{RO}bust \textbf{C}ounterfactual \textbf{E}xplanations under the \textbf{R}ight to be \textbf{F}orgotten}
-\end{exampleblock}
-
-1. First framework to formally address the right-to-explanation vs.\ right-to-be-forgotten tradeoff
-2. Efficient approximation via first-order Taylor expansion (avoids $\binom{n}{k}$ retraining)
-3. Theoretical bounds on cost and validity for linear and nonlinear models
-4. ROCERF **outperforms** existing counterfactual explanation methods (SCFE, C-CHVAE, ROAR)
-
-[@krishna2022rocerf]
-
----
-
-# ROCERF Framework
-
----
-
-# Notation
-
-\begin{center}
-\includegraphics[width=0.82\columnwidth]{imgs/rocerf_notation.png}
-\end{center}
-
-- Training data $D = \{(x_i, y_i)\}_{i=1}^n$, $y_i \in \{-1, +1\}$
-- **Data weight vector** $w \in \{0,1\}^n$: $w_i = 1$ (in training), $w_i = 0$ (forgotten)
-- $w = \mathbf{1}$: no data removed; $f_{\theta_1}$: model trained on all data; $f_{\theta_w}$: model on $D_w$
-
----
-
-# Counterfactual Explanation as Optimization
-
-\begin{center}
-\includegraphics[width=0.75\columnwidth]{imgs/rocerf_cfe_opt.png}
-\end{center}
-
-Standard CFE: find the closest valid counterfactual under the **current** model
-
-$$\min_{x \in \mathcal{X}} \|x - x_0\|_2 \quad \text{subject to} \quad f_{\hat{\theta}_1}(x) \geq 0$$
-
-**Problem:** after data deletion, $f_{\theta_w} \neq f_{\theta_1}$ — the CFE may no longer be valid.
-
----
-
-# $k$-Removal Robust CFE
-
-\begin{center}
-\includegraphics[width=0.82\columnwidth]{imgs/rocerf_k_removal.png}
-\end{center}
-
-\begin{definition}{}
-\textbf{$k$-RR CFE:} a counterfactual that remains valid upon removal of \textbf{any} $k$ data points
-\end{definition}
-
-$$\mathcal{W}^{(k)} = \{w \in \{0,1\}^n : \|w\|_1 = n - k\}$$
-
-$$\min_{x \in \mathcal{X}} \|x - x_0\|_2 \quad \text{s.t.} \quad f_{\hat{\theta}_w}(x) \geq 0,\ \forall w \in \mathcal{W}^{(k)}$$
-
-Naive approach: train $\binom{n}{k}$ classifiers with $\binom{n}{k}$ constraints — \textbf{computationally impractical!}
-
----
-
-# Efficient Approximation
-
-Fix $x$ and approximate $f_{\hat{\theta}_w}(x)$ via **first-order Taylor expansion** in $w$:
-
-$$\tilde{f}_{\hat{\theta}_w}(x) = f_{\hat{\theta}_1}(x) + \frac{\partial f_{\hat{\theta}_w}(x)}{\partial w}\bigg|_{w=\mathbf{1}} (w - \mathbf{1})$$
-
-\begin{center}
-\includegraphics[width=0.85\columnwidth]{imgs/rocerf_approx_formula.png}
-\end{center}
-
-Key result (via infinitesimal jackknife, Giordano et al. 2019):
-
-$$\tilde{f}_{\hat{\theta}_w}(x) = f_{\hat{\theta}_1}(x) + \frac{1}{n} \sum_{i:\, w_i=0} \beta(x)^T H^{-1} g_i(\hat{\theta}_1)$$
-
-where $\beta(x) = \left(\frac{\partial f_\theta(x)}{\partial \theta}\big|_{\theta=\hat{\theta}_1}\right)^T$ and $H = \frac{1}{n}\sum_i h_i(\hat{\theta}_1)$
-
----
-
-# From $\binom{n}{k}$ to a Single Constraint
-
-\begin{center}
-\includegraphics[width=0.82\columnwidth]{imgs/rocerf_final_opt.png}
-\end{center}
-
-Define $\mathcal{A}(x) := \{\beta(x)^T H^{-1} g_i(\hat{\theta}_1)\}$ — independent of weight vector $w$
-
-The worst-case constraint reduces to picking the **$k$ smallest** elements of $\mathcal{A}(x)$:
-
-$$f_\mathcal{A}^{(k)}(x) := f_{\hat{\theta}_1}(x) + \frac{1}{n} \min_{\mathcal{B} \subseteq \mathcal{A}(x),\, |\mathcal{B}|=k} \sum_{b \in \mathcal{B}} b$$
-
-Final optimization: $\min_{x \in \mathcal{X}} \|x - x_0\|_2 \quad \text{s.t.} \quad f_\mathcal{A}^{(k)}(x) \geq \delta$
-
-Solved via **penalty method**: $\min_x J_t(x) = \lambda_t \phi(\delta - f_\mathcal{A}^{(k)}(x)) + \|x - x_0\|_2$
-
----
-
-# Practical Considerations
-
-- **Computational cost:** $O(n)$ — only requires computing $\beta(x)^T H^{-1} g_i(\hat{\theta}_1)$ for each sample
-- **Hyperparameters:** $k$ (number of removals), $\delta$ (approximation error margin)
-- **Linear models:** can avoid the backward pass entirely
-
-$$\tilde{f}_{\hat{\theta}_w}(x) = \hat{\theta}_1^T x + \frac{1}{n} \sum_{i:\, w_i=0} x^T H^{-1} g_i(\hat{\theta}_1)$$
-
----
-
-# Theoretical Analysis: Validity \& Cost
-
-\begin{center}
-\includegraphics[width=0.78\columnwidth]{imgs/rocerf_validity_cost.png}
-\end{center}
-
-**Validity:** fraction of weight vectors $w \in \mathcal{V}$ for which the CFE $c(x)$ remains valid under $f_{\hat{\theta}_w}$
-
-**Cost:** average $\ell_2$ distance from original $x$ to counterfactual $c(x)$
-
-\begin{block}{Linear Model Bound}
-Additional cost to achieve robust validity has upper bound $O(k/n)$:
-$$\|\tilde{x}_0^{(k)} - x_0\|_2 \leq \|\tilde{x}_0 - x_0\|_2 + \frac{kC}{n\|\hat{\theta}_1\|_2}$$
-\end{block}
-
-For nonlinear (Mu-strongly convex) models: bound is $O(k/n\mu)$ under regularity conditions.
-
----
-
-# Experiments \& Results
+Instead of retraining the full model, a lightweight **patch** is learned to impose fairness. Shapley linearity ensures the corrected model's values remain interpretable in terms of its components.
 
 ---
 
 # Experimental Setup
 
-\begin{columns}
-\begin{column}{0.48\textwidth}
-**Datasets:** 3 real-world binary classification datasets from high-stakes decision making
+**Datasets:**
 
-- German Credit
-- COMPAS
-- Adult
+| Dataset | Task | Sensitive attribute $a$ |
+|---------|------|------------------------|
+| Adult (UCI) | Income prediction $>$50K | Sex, Race |
+| COMPAS | Recidivism prediction | Race |
 
-**Models:** regularized logistic regression + 3-layer feedforward NN
-\end{column}
-\begin{column}{0.48\textwidth}
-**Baselines:** SCFE, C-CHVAE, ROAR
-
-**Evaluation:**
-- Validity: randomly remove fraction $\alpha \in [0.5\%, 5\%]$
-- Repeat $M = 100$ times
-- $k = 0.5\%$ of training set, $\delta = 0$
-\end{column}
-\end{columns}
+**Evaluation:** fairness metric and accuracy, before and after intervention.
 
 ---
 
-# Results: Average Validity (Logistic Regression)
+# Results: Explainability
+
+:::: {.columns}
+::: {.column width="25%"}
+
+\small
+
+\vspace{2em}
+
+On the Adult dataset, the features with the highest contribution to unfairness are `marital status`, `sex`, and `relationship` --- even when `sex` does not appear directly in the model.
+
+:::
+::: {.column width="75%"}
 
 \begin{center}
-\includegraphics[width=0.9\columnwidth]{imgs/rocerf_results_lr.png}
+\includegraphics[width=\linewidth]{imgs/explainability_results.png}
 \end{center}
 
-\begin{exampleblock}{ROCERF achieves near-perfect validity}
-While SCFE, C-CHVAE, and ROAR degrade significantly as more data is removed, ROCERF (red) maintains validity $\approx 1.0$ across all datasets
-\end{exampleblock}
+:::
+::::
 
 ---
 
-# Results: Average Validity (Neural Networks)
+# Results: Robustness of Fairness Explanations
+
+:::: {.columns}
+::: {.column width="30%"}
+
+\small
+
+\vspace{3em}
+
+An attack suppressing the importance of `sex` reduces the Demographic Parity Difference from 0.193 to 0.184 --- a minimal reduction.
+
+\vspace{2em}
+
+Fairness Shapley Values **cannot** be manipulated to hide unfairness without changing the global metric.
+
+:::
+::: {.column width="70%"}
 
 \begin{center}
-\includegraphics[width=0.9\columnwidth]{imgs/rocerf_results_nn.png}
+\includegraphics[width=.9\linewidth]{imgs/robustness_results.png}
 \end{center}
 
-\begin{alertblock}{Non-linear models: more complex behavior}
-Some baselines improve validity as more data is forgotten (non-intuitive). ROCERF still competitive — though linear approximation assumptions are more strained for complex NNs.
+:::
+::::
+
+---
+
+# Results: Learned Perturbations (Demographic Parity)
+
+:::: {.columns}
+::: {.column width="70%"}
+
+\begin{center}
+\includegraphics[width=\linewidth]{imgs/table1_dp.png}
+\end{center}
+
+:::
+::: {.column width="30%"}
+
+\vspace{3em}
+\small
+
+- **No significant accuracy loss** across all thresholds
+- Perturbed models track their originals closely
+- Achieving near-perfect fairness costs less than **2 percentage** points of accuracy.
+:::
+::::
+
+---
+
+# Results: Learned Perturbations (Equalized Odds)
+
+:::: {.columns}
+::: {.column width="70%"}
+
+\begin{center}
+\includegraphics[width=\linewidth]{imgs/table2_eo.png}
+\end{center}
+
+:::
+::: {.column width="30%"}
+
+\vspace{3em}
+\small
+
+- **No significant accuracy loss** under equalized odds
+- Results generalize across fairness definitions
+
+
+
+:::
+::::
+
+
+---
+
+# Results: Learned Perturbations
+
+\vspace{1em}
+\begin{center}
+\includegraphics[width=0.7\columnwidth]{imgs/perturbation_results.png}
+\end{center}
+
+\vspace{-0.5em}
+
+- No significant accuracy reduction under demographic parity or equalized odds
+- The perturbative approach has **lower variance** and higher mean accuracy than baselines
+- **Model-agnostic**: structure or access requirements apply only to the perturbation, not the original model
+
+---
+
+# Limitations (Paper 1)
+
+- The choice of disparity measure $\delta$ is **normative**, not technical
+- Exact Shapley computation is **exponential** in $|F|$; approximations (SHAP) are used in practice
+- The framework is **global**; local fairness attributions remain an open problem
+- Does not resolve **which** fairness definition is appropriate for a given context
+
+## Notes
+
+Does Shapley attribution *explain* unfairness, or merely *measure* it?
+
+---
+
+# Summary of Contributions (Paper 1)
+
+| Contribution | Key point |
+|---|---|
+| Fairness Shapley Values | Attributes $\sum_i \Phi_g(i)$ to individual features |
+| Linearity property | Unfairness decomposes additively |
+| Meta-algorithm | Wraps any training-time fairness intervention |
+| Robustness | Explanations cannot be manipulated |
+
+---
+
+
+# Paper 2
+
+\begin{center}
+\includegraphics[width=0.7\columnwidth]{imgs/paper2.png}
+\end{center}
+
+[@krishna2023bridging]
+
+---
+
+# Motivation (Paper 2)
+
+**Two pillars of algorithmic accountability under GDPR**
+
+:::: {.columns}
+::: {.column width="50%"}
+
+\vspace{1em}
+
+- **Art. 22 (Right to Explanation):** individuals subject to automated decisions must receive a meaningful explanation
+- **Art. 17 (Right to be Forgotten):** individuals may request deletion of their personal data from models and databases
+- Both rights are **legally enforceable simultaneously**
+
+:::
+::: {.column width="48%"}
+
+\begin{alertblock}{The Problem}
+\begin{enumerate}
+\item Both rights are legally binding
+\item Enforcing one may \textbf{automatically violate} the other
+\item No existing framework addresses their \textbf{joint satisfaction}
+\end{enumerate}
 \end{alertblock}
 
+:::
+::::
 ---
 
-# Results: Average Cost
+# The Conflict: A Concrete Example
 
+\vspace{1em}
 \begin{center}
-\includegraphics[width=0.85\columnwidth]{imgs/rocerf_costs_tables.png}
+\includegraphics[width=0.6\columnwidth]{imgs/conflict_diagram.png}
 \end{center}
 
-- ROCERF achieves **comparable or lower cost** than baselines (except SCFE on some datasets)
-- C-CHVAE has very high cost — pays dearly for its robustness approach
-- Cost overhead of ROCERF over standard CFE is bounded by $O(k/n)$
+- A bank trains $f_{\theta_1}$ on $D$; denies a loan to $x_0$; provides counterfactual explanation $x^*$ under $f_{\theta_1}$
+- Another user invokes Art. 17; their data is deleted; model updates to $f_{\theta_w}$
+- Explanation $x^*$ is no longer valid under $f_{\theta_w}$ --- **Art. 22 is violated**
+
 
 ---
 
-# Sensitivity to Hyperparameter $k$
+# Contributions (Paper 2)
 
+- First algorithmic framework (**ROCERF**) to address the tradeoff between the right to explanation and the right to be forgotten
+- ROCERF not only bridges the gap but also **outperforms** existing counterfactual explanation methods
+
+---
+
+# ROCERF Framework
+
+**RObust Counterfactual Explanations under the Right to be Forgotten**
+
+The framework proceeds in four steps:
+
+- CFE as a standard optimization problem
+- CFE as an optimization problem under data removal
+- Efficient approximation (naive solution is intractable)
+- Theoretical bounds on cost and validity
+
+---
+
+
+# Notation: ROCERF
+
+**Data and classifier:**
+
+$$D = \{(x_i, y_i)\}_{i=1}^n, \quad x_i \in \mathcal{X},\; y_i \in \{-1, +1\}$$
+
+$$f_{\theta_1} = \operatorname{arg\,min}_{\theta} \frac{1}{n}\sum_{i=1}^n l_i(\theta), \qquad f_{\theta_w} = \operatorname{arg\,min}_{\theta} \frac{1}{\|w\|_1}\sum_{i=1}^n w_i\, l_i(\theta)$$
+
+**Data weight vector** $w \in \{0,1\}^n$:
+
+$$w_i = \begin{cases} 1 & \text{data point } i \text{ in training set} \\ 0 & \text{data point } i \text{ deleted} \end{cases}$$
+
+$w = \mathbf{1}$ means no data point has been removed.
+
+---
+
+# Counterfactual Explanation (CFE)
+
+
+- The Counterfactual Explanation is:
+    - Optimisation problem - find valid counterfactual with minimum cost
+    - the closest point to $x_0$ that flips the prediction:
+
+$$\min_{x \in \mathcal{X}} \;\; \|x - x_0\|_2 \qquad \text{s.t.} \quad f_{\hat\theta_1}(x) \geq 0$$
+
+## In Plain English
+
+"What is the minimum change to your profile so the model approves your loan?"
+This counterfactual is valid for the current model --- but may become invalid if the model changes.
+
+---
+
+# k-Removal Robust CFE
+
+**Definition:** a k-RR CFE is a counterfactual that remains valid upon removal of *any* $k$ data points.
+
+$$\mathcal{W}^{(k)} = \{w \in \{0,1\}^n : \|w\|_1 = n - k\}$$
+
+$$\min_{x \in \mathcal{X}} \;\; \|x - x_0\|_2 \qquad \text{s.t.} \quad f_{\hat\theta_w}(x) \geq 0,\; \forall w \in \mathcal{W}^{(k)}$$
+
+Naive solution: train $\binom{n}{k}$ classifiers and optimise with $\binom{n}{k}$ constraints.
+
+## Key Gap
+
+Computationally intractable. An efficient approximation is needed.
+
+---
+
+# Efficient Approximation: First-Order Taylor
+
+For fixed $x$, approximate $f_{\hat\theta_w}(x)$ via Taylor expansion w.r.t. $w$ (Giordano et al., 2019):
+
+$$\tilde f_{\hat\theta_w}(x) = f_{\hat\theta_1}(x) + \frac{1}{n} \sum_{i:\, w_i = 0} \beta(x)^T H^{-1} g_i(\hat\theta_1)$$
+
+where:
+
+$$\beta(x) := \left(\left.\frac{\partial f_\theta(x)}{\partial \theta}\right|_{\theta = \hat\theta_1}\right)^T, \quad H := \frac{1}{n}\sum_{i=1}^n h_i(\hat\theta_1), \quad g_i(\theta) := \frac{\partial l_i(\theta)}{\partial \theta}$$
+
+## In Plain English
+
+Instead of retraining for each possible deletion, the Hessian of the original model estimates how the prediction would change --- in a single pass.
+
+---
+
+# Eff. Approx: Reducing $\binom{n}{k}$ Constraints to One
+
+The term $\beta(x)^T H^{-1} g_i(\hat\theta_1)$ is **independent of** $w$. Only the tightest constraint needs to be retained:
+
+$$\mathcal{A}(x) := \{\beta(x)^T H^{-1} g_i(\hat\theta_1)\}_{i=1}^n$$
+
+$$\fcolorbox{darkgreen}{white}{$\displaystyle f^{(k)}_{\mathcal{A}}(x):= f_{\hat\theta_1}(x) + \frac{1}{n} \min_{\mathcal{B} \subseteq \mathcal{A}(x),\, |\mathcal{B}|=k} \sum_{b \in \mathcal{B}} b$}$$
+
+$$\min_{x \in \mathcal{X}} \|x - x_0\|_2 \qquad \text{s.t.} \quad f^{(k)}_{\mathcal{A}}(x) \geq \delta$$
+
+## In Plain English
+
+The worst case is deleting the $k$ points that most damage the prediction — pick the $k$ smallest values of $\mathcal{A}(x)$.
+
+---
+
+# Eff. Approx.: Final Optimisation Problem
+
+- Solving the constrained optimization problem.
+- Penalty method:
+
+$$\phi(z) := \max(z, 0)^2$$
+
+$$\min_{x \in \mathcal{X}} J_t(x) = \lambda_t\, \phi\!\left(\delta - f^{(k)}_{\mathcal{A}}(x)\right) + \|x - x_0\|_2$$
+
+
+## In Plain English
+
+The constraint becomes a penalty term that grows until the solution satisfies $f^{(k)}_{\mathcal{A}}(x) \geq \delta$ — standard unconstrained optimisation.
+
+---
+
+# Theoretical Guarantees: Linear Models
+
+For regularised logistic regression with $l_i(\theta) = \log(1 + \exp(-y_i \theta^T x_i)) + \gamma\|\theta\|_2^2$:
+
+$$\|\tilde{x}_0^{(k)} - x_0\|_2 \leq \|\tilde{x}_0 - x_0\|_2 + \frac{kC}{n\|\hat\theta_1\|_2}$$
+
+The additional cost of robustness has an upper bound of $\mathcal{O}(k/n)$, with theoretical guarantees on validity.
+
+## In Plain English
+
+Larger $k$ (more deletions to tolerate) or smaller $n$ (less data) increases the cost of the robust counterfactual --- but the growth is controlled and bounded.
+
+---
+
+# Theoretical Guarantees: Nonlinear Models
+
+Under regularity assumptions (Lipschitz, convexity), for nonlinear models:
+
+$$\|\tilde{x}_0^{(k)} - x_0\|_2 \leq \|\tilde{x}_0 - x_0\|_2 + \frac{2kC}{n}$$
+
+If the function is $\mu$-strongly convex, the bound improves further.
+
+The linear approximation may not capture deep neural network behaviour --- authors report cases where validity **improves** as more data is deleted, which is counterintuitive.
+
+---
+
+# Experimental Setup
+
+**Datasets:** three real-world binary classification datasets from high-stakes decision-making scenarios:
+
+- **German Credit** (Dua & Graff, 2017): 1,000 individuals, 60 features (demographic, personal, financial). Target: credit risk — "good" or "bad".
+- **Adult** (Yeh & Lien, 2009): 48,842 individuals, features include demographics, education, employment, and financial data. Target: income — above or below \$50 k/year.
+- **COMPAS** (Jordan & Freiburger, 2015): 18,876 defendants, criminal records and demographic features. Target: bail decision — "bail" or "no bail".
+
+**Models:**
+
+- **Logistic Regression (LR):** regularised logistic regression (scikit-learn default). Accuracy: German Credit 72.2%, COMPAS 85.8%, Adult 84.0%.
+- **Neural Network (NN):** 3-layer fully-connected feedforward network, hidden size $= 2 \times$ input dim, centered-softplus activation, trained with SGD (lr $= 0.01$). Accuracy: German Credit 73.9%, COMPAS 85.1%, Adult 84.7%.
+
+---
+
+# Experimental Setup cont.
+
+**Baselines:**
+
+- **SCFE** (Wachter et al., 2017): gradient-based optimization to find the CFE closest to the input — solves the standard problem (1) without any robustness consideration.
+- **C-CHVAE** (Pawelczyk et al., 2020): manifold-based method that searches for CFEs in a latent space, encouraging realistic counterfactuals on the data manifold.
+- **ROAR** (Upadhyay et al., 2021): generates CFEs robust to small Gaussian perturbations of model parameters — the strongest baseline, as it addresses model changes but without guarantees under data deletion.
+
+**Protocol:** randomly remove a fraction $\alpha \in [0.5\%, 5\%]$ of training data, repeated $M = 100$ times. Hyperparameters: $k = 0.5\%$ of training set size, $\delta = 0$.
+
+---
+
+# Experimental Results: Logistic Regression
+
+* The x-axis corresponds to the fraction of data removal $\alpha$ and the y-axis corresponds to the average validity. 
+* The error bars indicate the standard errors across $M = 100$ trials with each trial having an $\alpha$ fraction of training data points randomly removed. 
+
+\vspace{0.1em}
 \begin{center}
-\includegraphics[width=0.85\columnwidth]{imgs/rocerf_sensitivity.png}
+\includegraphics[width=0.8\columnwidth]{imgs/experiment_results_log_p2.png}
 \end{center}
 
-\begin{exampleblock}{Robust to $k$}
-ROCERF validity remains near 1.0 across all tested values of $k$ (0.005n to 0.05n) on COMPAS and Adult. Results insensitive to choice of $k$ in practice.
-\end{exampleblock}
+* ROCERF maintains validity $\approx 1.0$ while all baselines degrade significantly.
 
 ---
 
-# Conclusions: ROCERF
+# Experimental Results: Neural Networks Logistic Regression
 
-- **ROCERF** is the first framework to formally bridge the gap between the right to explanation and the right to be forgotten
-- Provably robust to model updates triggered by data deletion requests
-- Efficient: reduces exponential constraints to $O(n)$ computation via first-order approximation
-- Theoretical guarantees on validity and cost for linear models; empirically strong for NNs
+\vspace{0.1em}
+\begin{center}
+\includegraphics[width=0.8\columnwidth]{imgs/experiment_results_NN_p2.png}
+\end{center}
 
----
+* More dataset-dependent behaviour. 
+    - German Credit shows counterintuitive improvement 
+    - Small dataset size causes dramatic boundary shifts after deletion.
 
-# Limitations \& Future Work
 
-- **Non-linear models:** linear approximation may not capture complex NN behavior — validity can improve as more data is forgotten (non-intuitive)
-- **ROAR vs.\ ROCERF:** results track closely in some settings — is ROAR sufficient?
-- **Sensitivity to $k$:** why doesn't performance vary more with $k$? — higher $\alpha$ regimes needed
-- **Open question:** why has recourse literature focused on linear approximations when non-linear models exhibit non-intuitive behavior?
 
 ---
 
-# Discussion Questions: ROCERF
+# Experimental Results: Average Cost
 
-1. This paper bridges the right-to-explanation vs.\ right-to-be-forgotten gap (unlike the privacy vs.\ explanation tradeoff, which seems more opposed). What other XAI tradeoffs do you think can be bridged?
-2. Given that ROAR exists, do we really need ROCERF? Could deletion of data parameters be viewed as a perturbation of model parameters?
-3. Why has recourse literature focused on linear approximations when results show non-linear models exhibit non-intuitive behavior?
+\begin{center}
+\includegraphics[width=0.85\columnwidth]{imgs/experiment_results_table1_p2.png}
+\end{center}
 
-[@krishna2022rocerf]
+- **SCFE** has the lowest cost but significantly worse validity — cheap recourse that breaks under any deletion.
+- **C-CHVAE** pays very high cost across all datasets — manifold constraint makes CFEs expensive.
+- **ROAR** is close to **ROCERF** but **ROCERF** consistently achieves lower or equal cost with better validity.
 
 ---
+
+# Experimental Results: Average Cost Neural Networks
+
+\begin{center}
+\includegraphics[width=0.85\columnwidth]{imgs/experiment_results_table2_p2.png}
+\end{center}
+
+- **C-CHVAE** cost explodes on Adult ($8.83$) — manifold search fails badly in complex model settings.
+- **ROAR** and **ROCERF** track closely on COMPAS and Adult — consistent with the validity results.
+- **ROCERF** achieves the best cost/validity tradeoff overall: robustness does not require paying a large extra cost.
+
+---
+
+# Sensitivity Analysis — Hyperparameter $k$
+
+\begin{center}
+\includegraphics[width=0.90\columnwidth]{imgs/rocerf_sensitivity_k_p2.png}
+\end{center}
+
+- **COMPAS and Adult:** all variants of $k$ achieve 100% validity across all $\alpha$ values.
+- **German Credit:** lowest $k$ shows a slight drop for high $\alpha$ — fixed by increasing $k$.
+- Key guarantee: $k = 0.01n$ achieves 100% validity for any $\alpha \leq 1\%$; $k = 0.02n$ for any $\alpha \leq 2\%$.
+
+---
+
+
+# The Validity-Cost Trade-off
+
+:::: {.columns}
+::: {.column width="55%"}
+
+\vspace{2em}
+
+Forcing an explanation to remain valid under **more possible deletions** necessarily moves the counterfactual further from the original point.
+
+This is not a bug --- it is the **correct price** for regulatory compliance.
+
+The cost grows as $k$ increases.
+
+:::
+::: {.column width="43%"}
+
+\begin{alertblock}{For Regulators}
+How much additional cost is
+acceptable in exchange for
+deletion-robust explanations?
+This is a \textbf{policy decision},
+not a technical one.
+\end{alertblock}
+
+:::
+::::
+
+---
+
+# Limitations (Paper 2)
+
+:::: {.columns}
+::: {.column width="55%"}
+
+- Taylor approximation is exact only for convex losses; nonlinear models exhibit counterintuitive behaviour
+- Inverting $H$ is $\mathcal{O}(p^3)$ --- impractical for large neural networks
+- $k$ must be specified in advance; no principled selection method is provided
+- ROAR (with the same hyperparameters) tracks ROCERF closely --- is ROCERF really necessary?
+
+:::
+::: {.column width="43%"}
+
+\begin{alertblock}{Philosophical Note}
+An explanation that changes when
+training data changes was never
+really about the \textit{individual} ---
+it was about the \textit{model state
+at a given moment}.
+\end{alertblock}
+
+:::
+::::
+
+---
+
+# Summary of Contributions (Paper 2)
+
+| Contribution | Key point |
+|---|---|
+| ROCERF framework | First algorithm bridging the Art. 22 / Art. 17 conflict |
+| k-RR CFE | Counterfactual valid under any deletion of $k$ data points |
+| $\mathcal{O}(n)$ approximation | Taylor + infinitesimal jackknife reduces $\binom{n}{k}$ constraints to one |
+| Theoretical guarantees | Additional cost bounded by $\mathcal{O}(k/n)$ for linear models |
+
+---
+
+# Thank You!
 
 \begin{center}
 \Huge Thank You!
