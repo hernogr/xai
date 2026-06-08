@@ -154,6 +154,7 @@ def preprocess_markdown_source(src, fname, tempdir):
 
 def run_pandoc(path, output_path, ignore_error):
     pandoc = PANDOC_CMD_TEMPLATE.bake(path, output=output_path)
+    print(pandoc)
     try:
         return pandoc()
     except sh.ErrorReturnCode as err:
@@ -261,6 +262,7 @@ def main():
         # Run pandoc from lecture_dir so ../defaults.yaml resolves correctly
         with chdir(lecture_dir), tempfile.TemporaryDirectory() as tempdir:
             processed = preprocess_markdown_source(src, slides_file, tempdir)
+            import shutil; shutil.copy(processed, "coso.md")
             result = run_pandoc(processed, abs_output, ignore_error)
         if verbose and result:
             print(result)
