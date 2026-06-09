@@ -1,26 +1,27 @@
-# Images to replace
+# Images used in Lecture 22
 
-| Archivo | Slide PDF (página) | Contenido |
+| Archivo | Fuente / slide PDF | Contenido |
 |---|---|---|
-| `no_ground_truth.png` | 2 | Diagrama: Neural Network (icono grafo azul) → flecha "Interpretability" → Explanation (icono notebook azul). Pregunta en violeta: "Is the explanation correct?" Sin respuesta posible. Fondo blanco sobre gris claro. |
-| `ground_truth_loop.png` | 3 | Mismo diagrama anterior + Known Mechanism (icono código `<>`) conectado con flechas azules bidireccionales tanto a Neural Network como a Explanation. Pregunta "Is the explanation correct?" con doble flecha cerrando el loop. |
-| `tracr_intro.png` | 4 | Diagrama simple: icono código `<>` (Known Mechanism) → flecha → icono grafo hexagonal (Neural Network). Título grande: "Introducing Tracr: A Transformer Compiler for RASP". |
-| `plan_overview.png` | 5 | Dos cajas con borde azul: Caja 1 = "1. Building a compiler for transformer models" (icono código → grafo); Caja 2 = "2. Studying superposition in compiled models" (icono lupa sobre grafo). Encabezado "Plan for today". |
-| `hand_coding.png` | 7 | Dos columnas de imágenes de activación (heatmaps rojo-amarillo-azul oscuro): "Real curve detectors" (izq) vs "Hand-coded curve detectors" (der). Referencia: Cammarata et al. "Curve Circuits", Distill, 2021. |
-| `compiler_analogy.png` | 8 | Diagrama de tres filas: [RASP icon] ←→ [Programming language box]; [craft icon] ←→ [Assembly box]; [NN icon] ←→ [Machine code box]. Flechas sólidas hacia abajo en columna derecha. Líneas punteadas entre columnas. |
-| `three_steps.png` | 9 | Tres iconos azules en fila: (1) círculo con "RASP" = "Human readable code in domain-specific language"; (2) círculo con "craft" = "Basis independent representation of vector spaces and transformers"; (3) hexágono = "Neural network weights". |
-| `rasp_language.png` | 10 | Diagrama: RASP icon izquierda, NN icon derecha. "Arbitrary element-wise functions f( )" ←→ "MLP layers". "Select-aggregate operations" (cuadrícula azul) ←→ "Attention layers (w/ some limitations)". Nota al pie: RASP = Restricted Access Sequence Programming, Weiss et al. ICML 2021. |
-| `rasp_example.png` | 11 | Dos paneles: Izquierda = código RASP: `is_x = (tokens == "x")`, `prevs = select(indices, indices, <=)`, `frac_prev = aggregate(prevs, is_x)`. Derecha = evaluación en seq ["a","x","b","x","c"]: `is_x(seq)=[0,1,0,1,0]`, `prevs(seq)` = matriz de selección, `frac_prev(seq)=[0,1/2,1/3,2/4,2/5]`. |
-| `rasp_to_craft.png` | 12 | Dos partes: Izquierda = caja "Step 1-5" con pasos listados + diagrama de capas (no-op attn → MLP:is_x → Attn:prevs → no-op mlp) con rectángulos de colores (violeta=MLP, azul oscuro=Attn, punteado=no-op). Derecha = grafo computacional: tokens → MLP:is_x → Attn:prevs; indices → prevs → Attn:prevs. |
-| `mlp_implementation.png` | 13 | Dos paneles: Izquierda = "For categorical variables: MLP = Lookup table" (diagrama de red con nodos de colores). Derecha = "For numerical variables: Approximate using ReLU" (gráfico función continua azul vs aproximación escalonada verde). |
-| `attention_implementation.png` | 14 | Fórmulas: `select(indices, indices, <=)` → $W_Q^T W_K$; `aggregate(prevs, is_x)` → $W_O^T W_V$. Diagrama de bloque transformer con Residual stream, Attention pattern, Softmax. Bullets sobre temperatura softmax y token BOS. |
-| `craft_to_transformer.png` | 15 | Dos filas: Arriba = representación craft (capas punteadas + coloreadas) → icono craft. Abajo = transformer estándar (Attn-MLP-Attn-MLP) → icono NN. Texto: "abstract representation", "can be mapped to any GPT-like transformer", "haiku transformer". |
-| `compiled_residual_stream.png` | 17 | Heatmap del residual stream: filas = features (tokens:x, tokens:pad, tokens:c, tokens:bos, tokens:b, tokens:a, is_x_90, indices:0-4,-1, frac_prevs_88), columnas = Input / no-op Attn / MLP / Attn / no-op MLP. Colores amarillo/violeta oscuro/teal. Círculos rojos marcando is_x_90 en MLP y frac_prevs en Attn. Etiquetas "Computes is_x indicator" y "Computes fraction". |
-| `superposition_hypothesis.png` | 20 | Tres observaciones con imágenes: Obs 1 = gráfico de activación orientada (Cammarata, Distill 2020); Obs 2 = grid 3×4 de imágenes de activación máxima (Olah, Distill 2017); Obs 3 = diagrama de estrella de vectores en superposición (Elhage, 2022). |
-| `superposition_polysemanticity.png` | 21 | Diagrama "OBSERVED MODEL": red de nodos (3 capas, totalmente conectada) con texto: "Neural networks simulate larger networks with disentangled features", "These hypothetical features are projected into the actual network using superposition", "This results in polysemanticity". Referencia Elhage et al. 2022. |
-| `toy_model_superposition.png` | 22 | Izquierda = diagrama disentangled vs observed model con flechas W y W^T + fórmulas h=Wx, x'=ReLU(W^Th+b), L=ΣΣI_i(x_i-x'_i)². Derecha = "Empirical Version": gráfico 2D (eje x = Relative Feature Importance 0.1x–10x, eje y = Feature Density 0.01–1.0) con tres regiones: gris (not represented), azul (dedicated dimension), rojo (stored in superposition). |
-| `compress_tracr.png` | 23 | Dos columnas: Izquierda "In toy models we see superposition if": 1. sparse features, 2. important features, 3. fewer dimensions. Derecha "In Tracr models": 1-2 con flechas sólidas (satisfechos), 3 con flecha punteada morada "Can we compress?". Abajo: Motivation bullets. |
-| `linear_compression.png` | 24 | Diagrama de transformer con matrices W (naranja) y W^T (naranja) antes/después de cada capa Attn/MLP. Flechas: Input → W → ... → W^T → Output. Fórmulas: L(W,x)=L_out+L_layer; L_out=loss(...); L_layer=Σ(h_i-ĥ_{W,i})². |
-| `embeddings_superposition.png` | 25 | Tres matrices de correlación de features (labels: tokens:x, is_x, frac_prevs, indices:0-4, tokens:a-c, indices:-1, tokens:bos, tokens:pad): (1) Correlation matrix (rojo-blanco-azul); (2) Superposition W^TW con "embedding size=8"; (3) PCA Solution con "embedding size=8". |
-| `which_features_superposition.png` | 26-27 | Dos versiones animadas de la misma slide. Final: texto "Feature importance + Feature Density + Linear Independence" con flechas hacia "Open question: Can we find a more predictive description of which features will be stored in superposition?". Heatmap de W^TW a la derecha. |
-| `future_work.png` | 29 | Tres cajas numeradas dentro de un panel "Make Tracr models more naturalistic": 1. "Can we use Tracr to create evaluation benchmarks for interpretability tools?"; 2. "Can we revert superposition in Tracr models? (e.g., sparse coding, dictionary learning)"; 3. "Can we use Tracr to manually replace model components that we (think we) understand?". |
+| `lecture22_title.png` | Lecture_22.pdf, slide 1 | Title slide from the original lecture PDF. |
+| `no_ground_truth.png` | Lecture_22.pdf, slide 2 | Diagram showing neural network, interpretability method, explanation, and missing correctness ground truth. |
+| `ground_truth_loop.png` | Lecture_22.pdf, slide 3 | Same diagram with an added known mechanism that closes the verification loop. |
+| `tracr_intro.png` | Lecture_22.pdf, slide 4 | Known mechanism to neural network diagram introducing Tracr. |
+| `plan_overview.png` | Lecture_22.pdf, slides 5-6 | Two-part plan: compiler construction and superposition in compiled models. |
+| `hand_coding.png` | Lecture_22.pdf, slide 7 | Real versus hand-coded curve detector examples. |
+| `compiler_analogy.png` | Lecture_22.pdf, slide 8 | Analogy between Tracr and a standard compiler pipeline. |
+| `three_steps.png` | Lecture_22.pdf, slide 9 | RASP to craft to neural network weights. |
+| `rasp_language.png` | Lecture_22.pdf, slide 10 | RASP element-wise operations and select-aggregate operations. |
+| `rasp_example.png` | Lecture_22.pdf, slide 11 | Example RASP program computing fraction of previous `x` tokens. |
+| `rasp_to_craft.png` | Lecture_22.pdf, slide 12 | Computational graph and craft assembly procedure. |
+| `mlp_implementation.png` | Lecture_22.pdf, slide 13 | Lookup tables for categorical variables and ReLU approximation for numerical variables. |
+| `attention_implementation.png` | Lecture_22.pdf, slide 14 | Selector implementation with attention scores and aggregation. |
+| `craft_to_transformer.png` | Lecture_22.pdf, slide 15 | Mapping from craft representation to standard transformer architecture. |
+| `compiled_residual_stream.png` | Lecture_22.pdf, slide 17 | Residual stream visualization for the compiled example program. |
+| `superposition_hypothesis.png` | Lecture_22.pdf, slide 20 | Three observations motivating superposition. |
+| `superposition_polysemanticity.png` | Lecture_22.pdf, slide 21 | Diagram explaining projected features and polysemantic neurons. |
+| `toy_model_superposition.png` | Lecture_22.pdf, slide 22 | Toy model equations and empirical phase diagram. |
+| `compress_tracr.png` | Lecture_22.pdf, slide 23 | Motivation for compressing Tracr residual streams. |
+| `linear_compression.png` | Lecture_22.pdf, slide 24 | Linear compression setup and loss terms. |
+| `embeddings_superposition.png` | Lecture_22.pdf, slide 25 | Correlation matrix, learned superposition embedding, and PCA embedding. |
+| `which_features_superposition.png` | Lecture_22.pdf, slides 26-27 | Feature importance, density, and linear independence. |
+| `future_work.png` | Lecture_22.pdf, slide 29 | Future directions for Tracr and manual transformers. |
