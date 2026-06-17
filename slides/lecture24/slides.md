@@ -1,765 +1,951 @@
 ---
-title: "\\emoji{brain} XAI: LMs for Commonsense Reasoning \\& Contrastive Explanations"
+title: "XAI Lecture 24 --- Explaining LLM Reasoning"
+subtitle: "Background, then two papers: \\emph{generate} the reasoning (Rajani 2019) and \\emph{localise} the evidence (Yin \\& Neubig 2022)"
+author: "FAMAF - UNC"
+date: "First Semester 2026"
 bibliography: references.bib
-
 ---
 
 # Disclaimer
 
 \input{../disclaimer.tex}
 
----
+# Background --- the problem before the two papers
 
-\begin{center}
-\Large\textbf{Explain Yourself!}\\
-\Large\textbf{Leveraging Language Models for Commonsense Reasoning}\\
-\vspace{0.5cm}
-\normalsize Rajani, McCann, Xiong \& Socher\\
-\vspace{0.3cm}
-\footnotesize Presenters: Karly Hou, Eshika Saxena, Leonard Tang, Kat Zhang
-\end{center}
+Both papers attack the same question --- \textcolor{primarygreen}{\bfseries how do language models (LMs) reason?} --- from opposite ends. Before that, three things must be on the table:
 
----
+- **What commonsense reasoning is**, and why it is hard for NLU (Natural Language Understanding) systems.
+- **ConceptNet** --- the knowledge graph (Speer et al., 2017).
+- **CommonsenseQA (CQA)** --- the question-answering (QA) benchmark built *from* ConceptNet (Talmor et al., 2019), used by both papers.
 
-# Introduction
-
-- **Commonsense reasoning**: making human-like presumptions and judgements about ordinary situations
-- Modern ML methods struggle with commonsense reasoning
-- Explanations help verbalize reasoning that models learn while training
-- Common sense Question Answering (CQA) dataset
-
-\begin{exampleblock}{Example}
-\textbf{Question:} While eating a \textit{hamburger with friends}, what are people trying to do?\\
-\textbf{Choices:} \textbf{have fun}, tasty, or indigestion
-\end{exampleblock}
-
-\vspace{0.3cm}
-\begin{center}
-\textbf{How do these models perform reasoning and to what extent is that reasoning based on world knowledge?}
-\end{center}
-
----
-
-# Key Contributions: CoS-E Dataset
-
-Common Sense Explanations (CoS-E): Collected human explanations (annotations and natural language explanations) to build on top of CQA
-
-\begin{center}
-\includegraphics[width=0.65\columnwidth]{imgs/cos_e_examples_table.png}
-\end{center}
-
----
-
-# Key Contributions
-
-1. Common Sense Explanations (CoS-E)
-2. Commonsense Auto-Generated Explanations (CAGE)
-3. CAGE outperforms best baseline by 10% and produces explanations to justify its predictions
-4. Explanation transfer on two out-of-domain datasets
-
----
-
-# Related Work: Commonsense Reasoning
-
-- Commonsense reasoning datasets:
-  - Story Cloze: predicting story ending from a set of plausible endings
-  - Situations with Adversarial Generations (SWAG): predicting next scene based on initial event
-- Models achieve human-level performance on some datasets
-- Models struggle with understanding how pronouns resolve between sentences and world knowledge
-
-- CQA addresses this by requiring models to infer from the question
-- Language models perform poorly compared to human participants on CQA
-
-\begin{center}
-\textbf{Unclear: Do models actually do common-sense reasoning?}
-\end{center}
-
----
-
-# Related Work: Natural Language Explanations
-
-- Rationale generation by highlighting complete phrases in input text that are sufficient to predict desired output [@lei2016rationale]
-- Human-generated natural language explanations to train a semantic parser to generate noisy labeled data and train a classifier for generating explanations [@hancock2018training]
-- Interpretability comes at the cost of loss in performance on Stanford Natural Language Inference dataset [@camburu2018snli]
-- Multi-modal: Ensemble explanations and visual explanations improve performance [@rajani2018multimodal]
-
-\begin{center}
-\textbf{Do explanations for CQA lead to improved performance?}
-\end{center}
-
----
-
-# Related Work: Knowledge Transfer in NLP
-
-- Reliance on transfer of knowledge through pre-trained word vectors (e.g. Word2vec, GloVe) and contextualized word vectors (more refined with general encoding)
-- Language models trained from scratch on large amounts of data and fine-tuned on specific tasks perform well
-  - Only a few parameters need to be learned from scratch
-  - Perform well on small amounts of supervised data
-
-- \textcolor{red}{Gap: Fine-tuned language models don't perform as well on CQA}
-
-\vspace{0.3cm}
-\begin{center}
-\textbf{Can we leverage these models to generate explanations and show that these explanations capture common sense?}
-\end{center}
-
----
-
-\begin{center}
-\vfill
-\Large Common Sense Explanations (CoS-E)
-\vfill
-\end{center}
-
----
-
-# Dataset Structure/Creation
-
-- Based on the CQA dataset
-- CoS-E provides natural-language explanations for the correct answer choice and highlights important words in the question
-- Explanations generated using MTurk
-- Goal: To show whether models are performing reasoning correctly
-
-\begin{center}
-\includegraphics[width=0.65\columnwidth]{imgs/dataset_structure.png}
-\end{center}
-
----
-
-# Dataset Considerations
-
-- *CoS-E-selected* refers to the highlighted words, *CoS-E-open-ended* refers to the explanations
-- Quality control was performed on the annotations and explanations
-- Even explanations that don't discuss the ground truth answer are useful
-
-\begin{center}
-\includegraphics[width=0.65\columnwidth]{imgs/dataset_considerations_chart.png}
-\end{center}
-
----
-
-\begin{center}
-\vfill
-\Large Commonsense Auto-Generated Explanations (CAGE)
-\vfill
-\end{center}
-
----
-
-# CAGE Phase 1
-
-CAGE Phase 1:
-
-- Provide CQA example alongside corresponding CoS-E explanation to a language model
-- Train model to generate the CoS-E explanation
-
-\begin{center}
-\includegraphics[width=0.65\columnwidth]{imgs/cage_phase1_diagram.png}
-\end{center}
-
-\footnotesize Conditioned on question tokens $\mathcal{Q}$, answer choice tokens $A_1, A_2, A_3$, and previously generated tokens $E_1, \ldots, E_{i-1}$. Trained to generate token $E_i$.
-
----
-
-# CAGE Phase 2
-
-CAGE Phase 2:
-
-- Use language models to generate explanations for each example in the training and validation sets of CQA
-- Provide CAGE explanations to a second model by concatenating it to the original input (question, answer choices, and language model output)
-
-\begin{center}
-\includegraphics[width=0.55\columnwidth]{imgs/cage_phase2_diagram.png}
-\end{center}
-
-\footnotesize A trained CAGE language model generates explanations for a downstream commonsense reasoning model (CSRM), which predicts one of the answer choices.
-
----
-
-# CAGE Phase 1: Intuition
-
-\begin{center}
-\includegraphics[width=0.72\columnwidth]{imgs/cage_phase1_diagram.png}
-\end{center}
-
-\begin{center}
-One training step for CAGE
-\end{center}
-
----
-
-# How is CAGE Trained?
-
-- Language Model trained to generate explanations from question-answer choice pairs
-- Use pretrained OpenAI GPT
-- Fine-tuned on the CQA and CoS-E dataset combination
-- Two possible settings:
-  - **explain-then-predict (reasoning)**
-  - **predict-then-explain (rationalization)**
-
----
-
-# CAGE Notation
-
-- Question $q$
-- Answer choices $c_0, c_1, c_2$
-- Correct answer $a \in \{c_0, c_1, c_2\}$
-- CoS-E explanation $e_h$
-- CAGE predicted explanation $e$
-
----
-
-# Reasoning {.fragile}
-
-- Model is fine-tuned on the question, answer choices, and explanation tokens, but **not** the actual label.
-
-$$C_{RE} = \text{``}q,\ c_0,\ c_1,\ \text{or}\ c_2\text{?\ commonsense\ says\ ''}$$
-
-- Objective Function (canonical conditional language modeling objective):
-
-$$\sum_i \log P(e_i \mid e_{i-k}, \ldots, e_{i-1}, C_{RE};\ \Theta)$$
-
----
-
-# Rationalization {.fragile}
-
-- Model is now also given the ground truth label $a$:
-
-$$C_{RA} = \text{``}q,\ c_0,\ c_1,\ \text{or}\ c_2\text{?\ } a\ \text{because ''}$$
-
-- Objective Function is the same as before but also conditioned on the *label* $a$
-- Thus, the explanations create rationalization that makes the model more interpretable
-
----
-
-# Training Parameters
-
-- Generate sequences of maximum length 20
-- Batch Size: 36, Epochs: 10
-- Selected the best model using BLEU and perplexity scores
-
----
-
-\begin{center}
-\vfill
-\Large Commonsense Predictions with Explanations
-\vfill
-\end{center}
-
----
-
-# CAGE Phase 2: Intuition
-
-\begin{center}
-\includegraphics[width=0.68\columnwidth]{imgs/cage_phase2_diagram.png}
-\end{center}
-
----
-
-# CAGE Inference
-
-- Given human explanation from CoS-E or LM reasoning, can then perform predictions on CQA
-- Simply concatenate Question, [Sep], Explanation, [Sep], Answer Choice as input to downstream CSRM (classifier)
-- Use binary classification head on top of BERT backbone
-  - 3 answer choices $\rightarrow$ 3 input sequences
-  - Take sequence yielding highest confidence as output
-
----
-
-# CSRM (BERT) Training Hyperparameters
-
-- Train batch size: 24
-- Test batch size: 12
-- 10 training epochs
-- Max sequence length of 50 for labels-only; 175 including explanations
-
----
-
-\begin{center}
-\vfill
-\Large Experimental Results
-\vfill
-\end{center}
-
----
-
-# Experimental Results: CQA with CoS-E
-
-\begin{center}
-\includegraphics[width=0.6\columnwidth]{imgs/experimental_results_table2.png}
-\end{center}
-
-\begin{center}
-\small Table 2: Results on CQA dev-random-split with CoS-E used during training.
-\end{center}
-
----
-
-# Experimental Results: Comparison with SOTA
-
-\begin{columns}
-\begin{column}{0.48\textwidth}
-\begin{itemize}
-\item Google search ``question + answer choice'' collected 100 top snippets per answer as context for \textbf{Reading Comprehension model}
-\item Extra data did not improve accuracy
-\item CAGE-reasoning resulted in \textbf{10\% accuracy gain} over previous SOTA
-\end{itemize}
-\end{column}
-\begin{column}{0.48\textwidth}
-\includegraphics[width=\columnwidth]{imgs/experimental_results_sota.png}
-\end{column}
-\end{columns}
-
----
-
-# Experimental Results: Oracle Upper-Bound
-
-\begin{columns}
-\begin{column}{0.46\textwidth}
-\includegraphics[width=\columnwidth]{imgs/experimental_results_oracle.png}
-
-\small Table 4: Oracle results on CQA dev-random-split.
-\end{column}
-\begin{column}{0.50\textwidth}
-\begin{itemize}
-\item Oracle upper-bound: \textbf{human-generated explanations} from CoS-E provided during training and validation
-\item Unfair setting because human had ground truth answer
-\item ``CoS-E selected'': explanation consists of words humans selected as justification for model
-\end{itemize}
-\end{column}
-\end{columns}
-
----
-
-# Transferring Explanations Across Domains
-
-- How well do natural language explanations transfer from CQA to SWAG and Story Cloze Test?
-- Use GPT CAGE model fine-tuned on CQA train/dev to generate explanations on SWAG and Story Cloze Spring 2016 train/val
-- Rinse and repeat using BERT with classifier head
-
----
-
-# Experimental Results: Domain Transfer
-
-\begin{columns}
-\begin{column}{0.44\textwidth}
-\includegraphics[width=\columnwidth]{imgs/transfer_results.png}
-\end{column}
-\begin{column}{0.52\textwidth}
-\begin{itemize}
-\item Camburu et al (2018): transferring explanations from SNLI to MultiNLI performs very poorly
-\item Transfer of explanations on commonsense reasoning tasks
-\item NLI has small fixed set of pre-defined labels unlike commonsense reasoning tasks (CQA, SWAG, Story Cloze)
-\item \textbf{Adding explanations led to very small decrease in performance}
-\end{itemize}
-\end{column}
-\end{columns}
-
----
-
-\begin{center}
-\vfill
-\Large Qualitative Analysis
-\vfill
-\end{center}
-
----
-
-# Analysis of CAGE
-
-- CAGE-reasoning at train + validation $\rightarrow$ 72\% accuracy
-- CoS-E-open-ended performance at 90\%---why the gap?
-- Measure quality of CAGE:
-  - Human evaluation (42\% CAGE vs 52\% CoS-E-open-ended)
-  - BLEU score measures syntactical precision by n-gram overlap
-  - Perplexity: token-level measure of how well language models predict next word
-- Result: beneficial to fine-tune the LM, but humans and LMs have widely varying ways of providing useful explanations
-
----
-
-# Analysis of Baseline BERT Model
-
-- Error analysis on baseline BERT w/o explanations: performs poorly on longer/more compositional questions $\rightarrow$ explanations help
-- CAGE reasoning typically simpler construction than CoS-E-open-ended, but adds meaningful context
-- However, CAGE still provides ``incorrect'' answers often
-
-\begin{center}
-\includegraphics[width=0.9\columnwidth]{imgs/baseline_bert_examples.png}
-\end{center}
-
----
-
-# Domain Transfer: SWAG + Story Cloze
-
-\begin{center}
-\includegraphics[width=0.9\columnwidth]{imgs/domain_transfer_examples.png}
-\end{center}
-
----
-
-\begin{center}
-\vfill
-\Large Conclusion \& Group Discussion
-\vfill
-\end{center}
-
----
-
-# Conclusion
-
-- CoS-E on top of CommonsenseQA
-- CAGE framework $\rightarrow$ LM leverages explanations
-- Classifier on top of explanations
-- SOTA performance on a difficult commonsense reasoning task
-- Opens further avenues for studying explanation as it relates to interpretable commonsense reasoning
-
----
-
-# Discussion Questions
-
-- BLEU and perplexity as measures of goodness?
-  - Has been shown multiple times to correlate poorly with human judgement
-- Joint training of explanation and label? Not one prior to the other
-- Can commonsense reasoning help general reasoning (e.g. mathematics, Fermi, counterfactual) in other domains?
-- How to align human/machine explanations?
-- Recent work (RLPrompt, AutoPrompt) has shown that optimal prompts for LMs are often gibberish
-  - What does this say about the validity of using SOTA LMs for explanations?
-  - Can we regularize LM training to better align with human reasoning?
-
----
-
-\begin{center}
-\Large\textbf{Interpreting Language Models}\\
-\Large\textbf{with Contrastive Explanations}\\
-\vspace{0.5cm}
-\normalsize Kayo Yin \& Graham Neubig\\
-\vspace{0.3cm}
-\footnotesize Presented by Charumathi Badrinath, Eric Shen, Leonard Tang, and Skyler Wu
-\end{center}
-
----
-
-# Motivation + Example
-
-- We've seen many interpretability and explanation strategies being applied to LMs, including transformer-based autoregressive LMs...
-  - **Gradient-based/erasure-based feature attribution** methods provide a straightforward way to do this
-  - Interpret each token of the input text as a feature
-  - At each step, use gradients to calculate a **saliency score** to quantify the importance of each previous token to the model output (i.e. logit prediction for the next token)
-- E.g. gradient $\times$ input
-
----
-
-# Motivation + Example: How It Works
-
-\begin{center}
-\includegraphics[width=0.9\columnwidth]{imgs/motivation_gradient_input.png}
-\end{center}
-
----
-
-# Motivation + Example: The Problem
-
-- **Problem:** For many LMs, using typical gradient- or erasure-based methods doesn't provide informative explanations
-- Most of the time, the token with the highest saliency is the token immediately before the prediction
-- How can we create more meaningful attributions? By ***contrasting*** them with other token predictions.
-
-\begin{center}
-\includegraphics[width=0.55\columnwidth]{imgs/motivation_problem.png}
-\end{center}
-
-\begin{center}
-\small\textit{Knowing the previous word is certainly very important for figuring out the next word, but that's not very helpful!}
-\end{center}
-
----
-
-# Main Contributions and Key Ideas
-
-1. **Contrastive explanations:** why did the model predict one token *instead* of another? Extended previous methods.
-2. **Grammatical consistency:** contrastive $>$ non-contrastive explanations w.r.t. verifying linguistic/grammatical phenomena.
-3. **Human simulatability:** contrastive explanations help users better predict LLM behavior, also found to be more useful by humans.
-
-\begin{center}
-\includegraphics[width=0.7\columnwidth]{imgs/contrastive_key_ideas.png}
-\end{center}
-
-\footnotesize \textcolor{red}{Red} = raises probability of ``barking,'' \textcolor{blue}{Blue} = decreases probability of ``barking,'' White = little influence.
-
----
-
-# Background: GPT-2
-
-- Authors focus on GPT-2 (1.5B) and GPT-Neo (2.7B) $\rightarrow$ very similar to each other
-- **Training:** WebText dataset of 8 million web-pages
-  - No task-specific supervised training = ``Multi-task training''
-- **Objective:** predict the next word, given all previous words in input
-- **Behavior:** ``chameleon-like,'' adapts to style + content of the input text
-- **Architecture:** Transformer-based
-  - ``Autoregressive'': outputs tokens one at a time, *but* each token generated is appended to the input sequence $\rightarrow$ fed back to model for next step
-
----
-
-# Background: Gradient Norm Saliency Scores {.fragile}
-
-- **Originally for image classification:** compute gradient of class score w.r.t. input image, take the norm.
-  - Big gradient = big influence.
-- **For LLMs:** compute gradient of next token logit w.r.t. current input.
-
-$$g(x_i) = \nabla_{x_i} q(y_t \mid \mathbf{x})$$
-
-$$S_{GN}(x_i) = \|g(x_i)\|_{L_1}$$
-
-[@simonyan2013saliency]
-
----
-
-# Background: Gradient $\times$ Input Saliency Scores {.fragile}
-
-- **Method:** Similar gradient computation as Gradient Norm, simply replacing $L_1$ norm with dot product with input itself.
-
-$$g(x_i) = \nabla_{x_i} q(y_t \mid \mathbf{x})$$
-
-$$S_{GI}(x_i) = g(x_i) \cdot x_i$$
-
-[@shrikumar2016gradientinput]
-
----
-
-# Background: Input Erasure Saliency Scores {.fragile}
-
-- **Intuition:** how does erasing different parts of the input affect the output?
-- **Procedure:** compute difference in model outputs using full input vs. input with a specific token zeroed out. NOT gradient-based!
-
-$$S_E(x_i) = q(y_t \mid \mathbf{x}) - q(y_t \mid \mathbf{x}_{\neg i})$$
-
-[@li2016erasure]
-
----
-
-# Background: Related Work + Limitations (Pt. 1)
-
-- Non-contrastive saliency score methods:
-  - Simonyan et al. 2013, Shrikumar et al. 2016, Li et al. 2016 --- not NLP specific!
-  - Not very developed in NLP use cases.
-  - When applied to NLP (Wallace et al. 2019), methods often \underline{\textbf{return last token before output as most influential.}}
-- Adversarial Methods on NLP:
-  - Wallace et al. 2019: HotFlip on NLPs, replace words to change model's prediction. AllenNLP suite.
-
----
-
-# Background: Related Work + Limitations (Pt. 2)
-
-- Counterfactual explanations in *text classification*:
-  - Jacovi et al. 2021: erase features, project into ``contrastive space'' $\rightarrow$ measure importance by comparing class probabilities before/after erasure.
-  - Unsure how to extend into *language modeling* space with much bigger input + output spaces.
-- Contrastive methods are not new, just not used for NLP very much (Stepin et al. 2021, survey).
-
----
-
-# Method: Contrastive Setup
-
-- Simple modification to formulation of existing gradient-based explanations.
-- **Contrastive** setup:
-
-\begin{center}
-\includegraphics[width=0.82\columnwidth]{imgs/method_contrastive.png}
-\end{center}
-
----
-
-# Method: Contrastive Saliency Formulas
-
-Let $q(y_t|\mathbf{x})$ be the model output for token $y_t$, $S(x_i)$ the saliency score for token $x_i$ in input $\mathbf{x}$, and $\mathbf{x}_{\neg i}$ the input $\mathbf{x}$ where $x_i$ is zeroed out.
-
-\begin{center}
-\includegraphics[width=0.95\columnwidth]{imgs/method_formulas_table.png}
-\end{center}
-
----
-
-# Method: Back-Propagation in Contrastive Setting
-
-\begin{center}
-\includegraphics[width=0.88\columnwidth]{imgs/method_lm_diagram.png}
-\end{center}
-
-\begin{center}
-\small Step 3 is changed: we calculate and back-propagate the \textbf{difference in logits} between $y_t$ and $y_f$.
-\end{center}
-
----
-
-# Evaluation: Grammatical Consistency
-
-\textbf{Q:} Are contrastive explanations $\gg$ non-contrastive in identifying words that we think should influence the output token?
-
-\begin{block}{Experimental Setup}
-\begin{itemize}
-\item \textbf{BLiMP dataset:} pairs of minimally different English sentences that contrast in grammatical acceptability under some linguistic paradigm
-\item 5 linguistic phenomena with 12 paradigms
-\item Used spaCy NLP library to extract grammatically relevant parts of each sentence
-\end{itemize}
+\begin{block}{Why start here}
+CQA is not a generic multiple-choice set. \emph{How its questions are manufactured} is exactly what makes them hard --- and it explains a surprising result we will meet in Paper 1.
 \end{block}
 
----
+# Why commonsense is hard for NLU
 
-# Evaluation: BLiMP Linguistic Paradigms
+:::: columns
+::: {.column width="56%"}
+When people answer, they draw on world knowledge **not present in the text**: space, cause and effect, social conventions.
 
-\begin{center}
-\includegraphics[width=0.9\columnwidth]{imgs/blimp_table.png}
-\end{center}
+Example (Talmor et al., 2019):
 
----
+> *“Where was Simon when he heard the lawn mower?”*
 
-# Evaluation: Linguistic Consistency Metrics {.fragile}
-
-- $S$ = explanation vector; $S_i$ = saliency of $x_i$
-- $E$ = known evidence; $E_i = \mathbf{1}(x_i\ \text{grammatically influences output token})$
-- $S \cdot E$ $\rightarrow$ sum of saliency scores of all input tokens that are part of evidence
-- **Probes needed** $\rightarrow$ ranking of first token $x_i$ where $E_i = 1$ when sorted by decreasing saliency
-- **MRR (mean reciprocal rank)** $\rightarrow$ average (over all sentences) of inverse rank of first $x_i$ where $E_i = 1$ sorted by descending saliency
-
----
-
-# Findings: Linguistic Agreement
-
-\begin{columns}
-\begin{column}{0.50\textwidth}
-\begin{itemize}
-\item Contrastive explanations are more aligned with linguistic paradigms
-\item Contrastive explanations have a better alignment with BLiMP than random vectors baseline
-\item Non-contrastive explanations do \textbf{not} outperform random baseline
-\end{itemize}
-\end{column}
-\begin{column}{0.47\textwidth}
-\includegraphics[width=\columnwidth]{imgs/linguistic_agreement_bars.png}
-\end{column}
-\end{columns}
-
----
-
-# Findings: Linguistic Agreement (Distance Effect)
-
-\begin{columns}
-\begin{column}{0.48\textwidth}
-\begin{itemize}
-\item Further apart \textit{known evidence} token is from \textit{target token} $\rightarrow$ larger increase in MRR alignment of contrastive cf. non-contrastive
-\item Contrastive explanations can particularly capture model decisions requiring \textit{longer-range context}
-\end{itemize}
-\end{column}
-\begin{column}{0.48\textwidth}
-\includegraphics[width=\columnwidth]{imgs/linguistic_agreement_scatter.png}
-\end{column}
-\end{columns}
-
----
-
-# Evaluation: Human Simulatability
-
-\textbf{Q:} Do contrastive explanations increase users' ability to predict a model's output token (i.e. ``simulate'' model behavior)?
-
-\begin{block}{Experimental Setup}
-\begin{itemize}
-\item Model = GPT-2; explanation = \{no explanation, $S_{GI}$, $S^*_{GI}$, $S_E$, $S^*_E$\}
-\item 10 word pairs from BLiMP, 10 word pairs selected to maximize confusion score on WikiText-103 test split
-\end{itemize}
+A human silently infers: a lawn mower is **outdoors**, at **street level** $\rightarrow$\ Simon was **outside**.
+:::
+::: {.column width="42%"}
+\begin{block}{The contrast}
+Classic QA (e.g.\ SQuAD) hands you a paragraph and asks about \emph{it}. Commonsense QA gives \textbf{no} such paragraph --- the knowledge must already be in the model.
 \end{block}
 
+\begin{block}{Remarks}
+“Trivial for humans, out of reach for NLU systems” --- the gap this whole lecture circles around.
+\end{block}
+:::
+::::
+
+# ConceptNet: a commonsense knowledge graph (Speer et al., 2017)
+
+:::: columns
+::: {.column width="54%"}
+ConceptNet stores everyday knowledge as a **graph of triples**:
+
+- nodes are **concepts** (words / phrases);
+- edges are **named relations**.
+
+Typical relations: `IsA`, `AtLocation`, `UsedFor`, `CapableOf`, `Causes`, `PartOf`, `HasProperty`.
+
+\begin{block}{Remarks}
+Common sense \emph{written down} as a graph: millions of obvious facts, each a typed arrow between two ideas.
+\end{block}
+:::
+::: {.column width="44%"}
 \begin{center}
-\includegraphics[width=0.60\columnwidth]{imgs/user_study.png}
+\includegraphics[width=\linewidth]{imgs/d1.pdf}
+\end{center}
+\footnotesize Other triples: \texttt{knife--UsedFor-->cutting}, \texttt{bird--CapableOf-->fly}.
+:::
+::::
+
+# From ConceptNet to questions: how CQA is built
+
+:::: columns
+::: {.column width="50%"}
+\begin{center}
+\includegraphics[width=\columnwidth]{imgs/cqa_construction.pdf}
+\end{center}
+\footnotesize Talmor et al. (2019), Fig.\ 1.
+:::
+::: {.column width="48%"}
+A worker sees a **source concept** (*river*, green) and **three target concepts** (*waterfall, bridge, valley*, blue) sharing one relation (`AtLocation`).
+
+The worker writes **three questions**, one per target as the answer; the other two are distractors.
+
+Then per question: **+1 ConceptNet distractor** (red) and **+1 hand-authored** (purple) $\rightarrow$\ **5 choices** total.
+:::
+::::
+
+# The generation pipeline (Talmor et al., 2019)
+
+:::: columns
+::: {.column width="52%"}
+\begin{center}
+\includegraphics[width=\columnwidth,height=0.76\textheight,keepaspectratio]{imgs/cqa_pipeline.pdf}
+\end{center}
+\footnotesize After Talmor et al. (2019).
+:::
+::: {.column width="46%"}
+Six construction stages, top to bottom:
+
+1. **Filter** ConceptNet edges with rules.
+2. **Extract** a subgraph (source + 3 targets).
+3. Workers **author** one question per target.
+4. Workers **add distractors** ($\rightarrow$\ 5 choices).
+5. Workers **filter** by a quality score.
+6. **Collect web snippets** (for search baselines).
+:::
+::::
+
+# Why the distractors make it hard
+
+:::: columns
+::: {.column width="55%"}
+The distractors are **ConceptNet siblings**: same source concept, same relation.
+
+\begin{center}
+\includegraphics[width=\linewidth,height=0.46\textheight,keepaspectratio]{imgs/d2.pdf}
 \end{center}
 
----
+So a model **cannot** win by spotting which option “sounds river-ish” --- they all do. It must read the specific situation (*hold a cup upright to catch water*).
+:::
+::: {.column width="42%"}
+\begin{block}{Key insight}
+The construction \emph{forces} commonsense: surface word-association is neutralised by design, because every option is equally associated with the source.
+\end{block}
+:::
+::::
 
-# Findings: User Alignment
+# The numbers, and the gap
 
-\begin{columns}
-\begin{column}{0.52\textwidth}
-\begin{itemize}
-\item All four types of explanations help users simulate model behavior
-\item \textit{Contrastive explanations} lead to \textit{more accurate simulations}
-\item \textit{Contrastive explanations} are considered \textit{more useful}
-\item Takeaway: contrastive explanations help human observers accurately simulate model predictions the most
-\end{itemize}
-\end{column}
-\begin{column}{0.44\textwidth}
-\includegraphics[width=\columnwidth]{imgs/user_alignment_table.png}
-\end{column}
-\end{columns}
+:::: columns
+::: {.column width="55%"}
+- **12,247** questions in total (Talmor et al., 2019).
+- Best baseline **BERT-large $\approx 56\%$** vs **human $\approx 89\%$**.
+- Even adding **Google-search snippets** does **not** help $\rightarrow$\ the difficulty is reasoning, not missing data.
 
----
+\begin{block}{Two versions --- remember this!}
+\textbf{v1.0}: $\approx$ 9,500 questions, \textbf{3} choices (GPT 54.8\%, human 95.3\%).\quad
+\textbf{v1.11}: 12,247 questions, \textbf{5} choices.
+\end{block}
+:::
+::: {.column width="42%"}
+\begin{block}{Why it returns}
+Paper 1 reports results on \emph{both} versions. The jump from 3 to 5 ConceptNet-sibling choices is exactly where its method will stumble.
+\end{block}
+:::
+::::
 
-# Evaluation: What Context Do Models Use?
+# Background $\rightarrow$ the two papers
 
-\textbf{Q:} How do language models achieve various linguistic distinctions? Is similar evidence necessary to disambiguate foils that are similar linguistically?
-
-\begin{block}{Experimental Setup}
-\begin{itemize}
-\item Targets = 10 most frequent words per major POS; Foils = 10000 most frequent vocab items
-\item For each target $y_t$ select 500 sentences from WikiText-103
-\item For each foil $y_f$ generate contrastive explanation $e(x_i, y_t, y_f)$ and concatenate
-\item Apply k-means on explanation vectors $e(x_i, y_t, \text{all foils})$
-\end{itemize}
+\begin{block}{The set-up for the lecture}
+Given this hard benchmark, two natural questions follow:
 \end{block}
 
-\begin{alertblock}{Idea}
-Explanation vectors represent \textit{type of context} needed to disambiguate foil from target
-\end{alertblock}
-
----
-
-# Findings: What Context Do Models Use?
+- **Paper 1 (Rajani et al., 2019):** can a model that *writes its reasoning* answer better? $\rightarrow$\ *generate* explanations.
+- **Paper 2 (Yin \& Neubig, 2022):** can we *point at the exact input word* that drove a prediction? $\rightarrow$\ *localise* evidence.
 
 \begin{center}
-\includegraphics[width=0.9\columnwidth]{imgs/context_decisions_table.png}
+\textcolor{primarygreen}{\bfseries verbalise the reasoning} \qquad vs.\qquad \textcolor{primarygreen}{\bfseries localise the evidence}
 \end{center}
 
-- (Paradigmatically) linguistically similar foils cluster together
-- Examining cluster explanations yields insights into GPT-2 (``BERTology'')
-  - Pronoun Ex: GPT-2 influenced by unrelated pronouns $\rightarrow$ produces incorrect gender
+# The two papers at a glance
 
----
+\small\textcolor{primarygreen}{\bfseries Unit IV $\cdot$ Week 12.}\ Both methods explain a trained \textbf{language model (LM)} \emph{from the outside} (inputs $\to$ outputs) --- but the LM itself differs per paper.\normalsize
 
-# Strengths / Weaknesses
-
-\begin{columns}
-\begin{column}{0.48\textwidth}
-\textcolor{primarygreen}{\textbf{Strengths}}
-\begin{itemize}
-\item Simple yet effective modification applicable to a variety of feature attribution methods
-\item Easy to compute, extensible to general LMs (including NMT)
-\item Evaluated with interesting foil clustering analysis
-\item Empirically shown to help with human observers (good for interpretability)
+:::: columns
+::: {.column width="49%"}
+\begin{block}{Paper 1 $\cdot$ Rajani et al. (2019) --- CAGE}
+\textcolor{primarygreen}{\bfseries Verbalise the reasoning}\par\smallskip
+\footnotesize
+\begin{itemize}\setlength{\itemsep}{1pt}
+\item \textbf{Explains:} a BERT classifier (few answer options).
+\item \textbf{What:} a natural-language narrative.
+\item \textbf{Goal:} plausibility $+$ accuracy.
+\item \textbf{Family:} generated explanation.
+\item \textbf{Nature:} black-box (internals not inspected).
 \end{itemize}
-\end{column}
-\begin{column}{0.48\textwidth}
-\textcolor{red}{\textbf{Weaknesses}}
-\begin{itemize}
-\item Only applied to three feature attribution methods in the paper
-\item Only GPT-2 and GPT-Neo used as LM examples
-\item Human study very limited in scope
-\item Does not attempt to look at model internals; saliency scores are arguably a crude approximation of interpretation
+\end{block}
+:::
+::: {.column width="49%"}
+\begin{block}{Paper 2 $\cdot$ Yin \& Neubig (2022)}
+\textcolor{primarygreen}{\bfseries Localise the evidence}\par\smallskip
+\footnotesize
+\begin{itemize}\setlength{\itemsep}{1pt}
+\item \textbf{Explains:} a generative LM --- GPT-2 / GPT-Neo ($\sim 50{,}000$ tokens).
+\item \textbf{What:} attributes the output to input tokens.
+\item \textbf{Goal:} faithfulness, fine-grained evidence.
+\item \textbf{Family:} contrastive attribution (gradient/erasure).
+\item \textbf{Nature:} gradients (white-box) or perturbation.
 \end{itemize}
-\end{column}
-\end{columns}
-
----
-
-# Questions for the Audience
-
-- Given that LLMs often exhibit ``phase shifts'' at different sizes, to what extent do you expect the results to generalize to cutting-edge models like GPT-4?
-- In practice, how would one create foils for free-response questions and/or general conversational use? How generalizable are these contrastive tools?
-- How effective do you think saliency scores (through gradient/erasure-based methods) are for achieving interpretability?
-- How much do we trust the GPT-2 embeddings (primary workhorse for most methods) and the generalizability of the authors' results?
-
----
+\end{block}
+:::
+::::
 
 \begin{center}
-\Huge Thank You!
+\includegraphics[width=0.78\linewidth,height=0.18\textheight,keepaspectratio]{imgs/d7.pdf}
 \end{center}
 
----
+# Paper 1
+
+\begin{center}
+\includegraphics[width=0.92\columnwidth]{imgs/paper1_title.png}
+\end{center}
+
+# Introduction + Motivation
+
+:::: columns
+::: {.column width="55%"}
+**The problem:** deep models do poorly on tasks needing commonsense reasoning --- knowledge not present in the input.
+
+- An **explanation** verbalises the reasoning a model uses.
+- **CommonsenseQA** is the benchmark (Talmor et al., 2019) --- *see Background*.
+- Open question: *do* these models reason, and how much rests on world knowledge?
+:::
+::: {.column width="42%"}
+\begin{block}{Core idea}
+Train a language model to \textbf{generate explanations}, feed them to a classifier, and \textbf{measure whether they help}.
+\end{block}
+
+\begin{block}{Remarks}
+Test whether the explanation \emph{helps accuracy} --- not merely whether it sounds nice.
+\end{block}
+:::
+::::
+
+# The pipeline, end to end
+
+:::: columns
+::: {.column width="55%"}
+1. Take a CQA example: question $q$, choices $c_0,c_1,c_2$, gold answer $a$.
+2. A human writes explanation $e_h$ for *why* $a$ is correct (this is **CoS-E** --- Common Sense Explanations).
+3. Fine-tune a language model (**GPT** --- generative pre-training, Radford et al., 2018) to generate $e \approx e_h$.
+4. Concatenate $q+$choices$+\,e$ and feed to a **BERT** classifier (bidirectional encoder, Devlin et al., 2019).
+5. Measure: does $e$ raise accuracy?
+:::
+::: {.column width="42%"}
+\begin{center}
+\includegraphics[width=\linewidth]{imgs/d3.pdf}
+\end{center}
+\begin{block}{Remarks}
+\textbf{GPT explains, BERT decides.} The LM is a commentator, not the judge.
+\end{block}
+:::
+::::
+
+# Didactic aside: what does “fine-tune GPT to generate $e$” mean?
+
+:::: columns
+::: {.column width="55%"}
+- A language model already knows how to **continue text** (next-word prediction).
+- **Fine-tuning** = keep training it, but now on `(question + choices) --> explanation` pairs from CoS-E.
+- After fine-tuning, given a *new* question it can **write its own explanation**, imitating the human ones.
+:::
+::: {.column width="42%"}
+\begin{block}{Mental model}
+We are not teaching new facts; we are teaching a \emph{format}: “given a question, produce the kind of one-sentence justification a person would write.”
+\end{block}
+:::
+::::
+
+# CoS-E: Common Sense Explanations
+
+:::: columns
+::: {.column width="55%"}
+A new dataset **on top of CQA**, collected via Amazon Mechanical Turk.
+
+- **CoS-E-selected:** highlighted words in the question.
+- **CoS-E-open-ended:** a free-form explanation sentence.
+- Sizes (train / dev): v1.0 $=$ 7,610 / 950; v1.11 $=$ 9,741 / 1,221.
+- Quality control: $\geq 1$ highlighted word, explanation $\geq 4$ words, not a substring, templates filtered.
+:::
+::: {.column width="42%"}
+\begin{block}{Remarks}
+Before GPT can \emph{write} explanations, it needs \emph{examples} of explanations. CoS-E is that supervision.
+\end{block}
+:::
+::::
+
+# CoS-E: three concrete examples (Table 1)
+
+\footnotesize
+\begin{block}{From the paper}
+\textbf{Q:} “While eating a hamburger with friends, what are people trying to do?” \quad Choices: \textbf{have fun}, tasty, indigestion.\\
+\textbf{CoS-E:} “Usually a hamburger with friends indicates a good time.”
+\end{block}
+\begin{block}{}
+\textbf{Q:} “After getting drunk people couldn't understand him, it was because of his what?” \quad Choices: lower standards, \textbf{slurred speech}, falling down.\\
+\textbf{CoS-E:} “People who are drunk have difficulty speaking.”
+\end{block}
+\begin{block}{}
+\textbf{Q:} “People do what during their time off from work?” \quad Choices: \textbf{take trips}, brow shorter, become hysterical.\\
+\textbf{CoS-E:} “People usually do something relaxing, such as taking trips, when they don't need to work.”
+\end{block}
+
+# CoS-E: a worked example, link by link
+
+:::: columns
+::: {.column width="55%"}
+\begin{block}{Question}
+While eating a hamburger with friends, what are people trying to do? --- \textbf{have fun} / tasty / indigestion.
+\end{block}
+
+The bare question never says friends are enjoyable. The explanation supplies the missing world-knowledge link:
+
+\begin{center}
+hamburger $+$ friends $\rightarrow$\ social $\rightarrow$\ enjoyable $\rightarrow$\ \textcolor{primarygreen}{\bfseries have fun}
+\end{center}
+:::
+::: {.column width="42%"}
+\begin{block}{Remarks}
+That chain --- “hamburger with friends $=$ a good time” --- is commonsense made \emph{explicit in words}. That is what CoS-E records.
+\end{block}
+:::
+::::
+
+# CoS-E: what it actually contains
+
+:::: columns
+::: {.column width="52%"}
+\begin{center}
+\includegraphics[width=\linewidth]{imgs/d5.pdf}
+\end{center}
+:::
+::: {.column width="46%"}
+- **58\%** of explanations contain the ground-truth answer.
+- Even explanations with **no** word overlap with any choice still beat the no-explanation baseline.
+
+\begin{block}{Takeaway}
+The explanation adds \emph{real signal}, not mere repetition of the answer.
+\end{block}
+:::
+::::
+
+# CAGE: Commonsense Auto-Generated Explanations
+
+:::: columns
+::: {.column width="55%"}
+\begin{center}
+\includegraphics[width=\linewidth]{imgs/d4.pdf}
+\end{center}
+:::
+::: {.column width="42%"}
+- **Phase 1 --- generate:** fine-tune GPT on CQA $+$ CoS-E to produce $e$.
+- **Phase 2 --- classify:** BERT predicts the answer using $q+$choices$+\,e$.
+
+\begin{block}{Recall}
+First \emph{manufacture} the “why”; then \emph{decide} with its help.
+\end{block}
+:::
+::::
+
+# CAGE-reasoning (explain-then-predict)
+
+:::: columns
+::: {.column width="55%"}
+**Main approach.** LM conditioned on question $+$ choices $+$ human explanation, **not** the gold label.
+
+Input context (the prompt $C_{RE}$):
+
+\footnotesize
+“$q$, $c_0$, $c_1$, or $c_2$? commonsense says \_\_\_”
+\normalsize
+
+Objective:
+
+\resizebox{\linewidth}{!}{$\displaystyle \max_{\Theta}\ \sum_i \log P(e_i \mid e_{i-k},\dots,e_{i-1},\,C_{RE};\,\Theta)$}
+:::
+::: {.column width="42%"}
+\begin{block}{Memory hook}
+The prompt ends in \texttt{commonsense says \_\_\_}: \textbf{no answer inside}. So the explanation is produced \emph{before} the answer is known.
+\end{block}
+:::
+::::
+
+# Deep dive: the training objective, term by term
+
+:::: columns
+::: {.column width="55%"}
+Decompose $\displaystyle \max_{\Theta}\sum_i \log P(e_i \mid e_{<i},C_{RE};\Theta)$.
+
+- $e_i$ --- the $i$-th token of the explanation to produce.
+- $e_{<i}$ --- tokens already written (read to continue).
+- $C_{RE}$ --- prompt: question $+$ choices $+$ “commonsense says”.
+- $\Theta$ --- the LM parameters being fine-tuned.
+- $\sum_i \log P$ --- next-token likelihood over explanation tokens.
+:::
+::: {.column width="42%"}
+\begin{block}{Remarks}
+Ordinary next-word training, but the “text to predict” is the \emph{explanation}, and the prompt \emph{excludes the label} --- so nothing leaks the answer.
+\end{block}
+:::
+::::
+
+# Didactic aside: “label in the prompt” --- the same example, both ways
+
+\footnotesize
+\begin{block}{Reasoning ($C_{RE}$) --- answer absent}
+“While eating a hamburger with friends, what are people trying to do? \textbf{have fun}, tasty, or indigestion? \emph{commonsense says} \underline{\hspace{2cm}}”
+\end{block}
+\begin{block}{Rationalisation ($C_{RA}$) --- answer present}
+“While eating a hamburger with friends \ldots? have fun, tasty, or indigestion? \textbf{have fun} \emph{because} \underline{\hspace{2cm}}”
+\end{block}
+\normalsize
+\begin{center}
+\textcolor{primarygreen}{\bfseries Only one word's worth of difference --- but in one case the model already knows the answer.}
+\end{center}
+
+# CAGE-rationalization (predict-then-explain)
+
+:::: columns
+::: {.column width="55%"}
+**The reverse.** LM conditions on the **predicted label**; produces a post-hoc justification.
+
+\footnotesize
+$C_{RA} =$ “$q$, $c_0$, $c_1$, or $c_2$? $a$ because \_\_\_”
+\normalsize
+
+\footnotesize Hyper-parameters: max length 20, batch 36, $\leq 10$ epochs, lr 1e-6, warmup 0.002, weight decay 0.01.
+:::
+::: {.column width="42%"}
+\begin{block}{Remarks}
+The explanation comes \emph{after} the answer $\rightarrow$\ a \textbf{rationalisation}, not reasoning. More interpretable, but it cannot be the \emph{cause} of the prediction.
+\end{block}
+:::
+::::
+
+# Deep dive: reasoning vs.\ rationalisation
+
+:::: columns
+::: {.column width="55%"}
+**One word changes everything: where the label sits.**
+
+- **Reasoning** ($C_{RE}$): no label $\rightarrow$\ $e$ made at inference, used as genuine new context.
+- **Rationalisation** ($C_{RA}$): label in prompt $\rightarrow$\ $e$ conditioned on the answer.
+- Accuracy: reasoning **$+10\%$** over the previous state of the art (SOTA); rationalisation **$+6\%$**.
+- Only reasoning can be called “commonsense reasoning”.
+:::
+::: {.column width="42%"}
+\begin{block}{Key insight (the heart of the lecture)}
+Faithfulness is decided by \textbf{information flow}, not output quality. A \emph{fluent} rationalisation can still be \emph{unfaithful}.
+\end{block}
+:::
+::::
+
+# Results: CommonsenseQA v1.0 (3 choices)
+
+:::: columns
+::: {.column width="48%"}
+**Dev (random split)**
+
+\begin{tabular}{lr}\hline
+Method & Acc.\ (\%)\\ \hline
+BERT baseline & 63.8\\
+CoS-E-open-ended & 65.5\\
+CAGE-reasoning & \textbf{72.6}\\ \hline
+\end{tabular}
+:::
+::: {.column width="48%"}
+**Test split (v1.0)**
+
+\begin{tabular}{lr}\hline
+Method & Acc.\ (\%)\\ \hline
+RC (Talmor) & 47.7\\
+GPT (Talmor) & 54.8\\
+CoS-E-open-ended & 60.2\\
+CAGE-reasoning & \textbf{64.7}\\
+Human & 95.3\\ \hline
+\end{tabular}
+:::
+::::
+
+\footnotesize RC $=$ reading-comprehension baseline (Talmor et al., 2019).\normalsize
+
+\vspace{4pt}
+\begin{block}{Headline}
+$\approx 10\%$ absolute over previous SOTA on test --- yet still far below the human 95.3\%.
+\end{block}
+
+# Results: CQA v1.11 (5 choices) --- the uncomfortable result
+
+:::: columns
+::: {.column width="48%"}
+\begin{tabular}{lr}\hline
+Method & Acc.\ (\%)\\ \hline
+CAGE-reasoning & 55.7\\
+BERT baseline & 56.7\\
+\textbf{CoS-E-open-ended} & \textbf{58.2}\\ \hline
+\end{tabular}
+:::
+::: {.column width="48%"}
+\begin{block}{Remarks}
+On the harder 5-choice version \textbf{CAGE loses to the plain baseline}. The explanation often \emph{contains} the right answer, but the classifier cannot exploit it.
+\end{block}
+:::
+::::
+
+\begin{block}{Connect to Background}
+Recall: v1.11 has \textbf{five ConceptNet siblings}. With options that semantically close, simply \emph{concatenating} the explanation is not enough. The authors report this honestly.
+\end{block}
+
+# Results: out-of-domain transfer
+
+:::: columns
+::: {.column width="50%"}
+\begin{tabular}{lrr}\hline
+Method & SWAG & Story Cloze\\ \hline
+BERT & 84.2 & 89.8\\
+$+$ explanation transfer & 83.6 & 89.5\\ \hline
+\end{tabular}
+:::
+::: {.column width="46%"}
+\begin{block}{Remarks}
+Transfer with no retraining costs only a \textbf{tiny drop} ($<0.6\%$). Fluent, relevant explanations --- but no downstream gain. An \emph{honest negative result}.
+\end{block}
+:::
+::::
+
+# Qualitative analysis
+
+:::: columns
+::: {.column width="55%"}
+- CAGE explanations use **simpler constructions** than humans, yet can be *more* informative.
+- Contain an answer choice **43\%** of the time; the *predicted* choice only **21\%**.
+- **BLEU** (n-gram overlap with references) vs human explanations peaks at **4.1** (vs 0.8 untuned); perplexity 32.
+:::
+::: {.column width="42%"}
+\begin{block}{Foreshadowing}
+Low BLEU but real usefulness $\rightarrow$\ something can be \emph{useful without resembling human wording}. This previews Paper 2's \textbf{faithfulness vs.\ plausibility} tension.
+\end{block}
+:::
+::::
+
+# Limitations + critical reading of Rajani et al.
+
+- **Human simulatability is low:** from the explanation alone, Turkers recover the model's answer **42\%** (CAGE) vs **52\%** (human) $\rightarrow$\ the explanation does not transparently reveal the model.
+- **Adversarial explanations are catastrophic:** misleading explanations drop accuracy **60\% $\to$ 30\%** --- below the 50\% baseline.
+- **Bias propagation:** CQA gender disparity flows into CoS-E and the trained models.
+
+# Bridge to Paper 2
+
+:::: columns
+::: {.column width="55%"}
+\begin{block}{What Rajani et al.\ leave open}
+They \emph{generate} explanations, but never ask: \textbf{which input tokens caused this prediction}, and \textbf{why this token instead of another?}
+\end{block}
+
+- Generated explanations are **plausible** but not necessarily **faithful**.
+- Language generation has an enormous output space $\rightarrow$\ we need a **token-level** lens.
+:::
+::: {.column width="42%"}
+\begin{block}{Next}
+\textbf{Yin \& Neubig (2022):} contrastive input-saliency --- look \emph{inside} the model.
+\end{block}
+:::
+::::
+
+# Paper 2
+
+\begin{center}
+\includegraphics[width=0.92\columnwidth]{imgs/paper2_title.png}
+\end{center}
+
+# Introduction + Motivation: the output-space problem
+
+:::: columns
+::: {.column width="55%"}
+- Classification: **small** output space (few labels).
+- Language modelling: **tens of thousands** of tokens per step.
+- A single prediction conflates **many** decisions: part of speech, number, tense, semantics.
+:::
+::: {.column width="42%"}
+\begin{block}{Symptom}
+Non-contrastive saliency just highlights the token \textbf{right before} the prediction --- uninformative about subtle choices.
+\end{block}
+:::
+::::
+
+# Didactic aside: “output space”, concretely
+
+:::: columns
+::: {.column width="55%"}
+- A spam classifier picks among $\{\text{spam}, \text{ham}\}$ --- 2 options. “Why?” is easy.
+- A language model picks the next token among **$\sim 50{,}000$** options.
+
+\begin{center}
+“Can you stop the dog \underline{\hspace{1.6cm}}” $\rightarrow$\ \{barking, crying, walking, running, \dots\}
+\end{center}
+:::
+::: {.column width="42%"}
+\begin{block}{Why this matters}
+With 50,000 outputs, “what mattered for the prediction?” blurs together grammar, number, tense and meaning into one uninformative answer.
+\end{block}
+:::
+::::
+
+# The contrastive lens
+
+:::: columns
+::: {.column width="55%"}
+Why did the model predict **“barking”** given *“Can you stop the dog from \_\_\_”*?
+
+- Non-contrastive: highlights “from” (obvious preceding token).
+- “barking” **instead of** “crying”? $\rightarrow$\ **“dog”** matters.
+- “barking” **instead of** “walking”? $\rightarrow$\ **“stop”** matters.
+:::
+::: {.column width="42%"}
+\begin{block}{Key insight}
+Contrastive explanation (Lipton, 1990) asks why target $y_t$ \emph{rather than} foil $y_f$. The \textbf{foil} picks \emph{which} conflated decision we explain.
+\end{block}
+:::
+::::
+
+# Didactic aside: what is a “foil”?
+
+:::: columns
+::: {.column width="55%"}
+- $y_t$ = the **target** = what the model actually said (*barking*).
+- $y_f$ = the **foil** = a chosen rival you compare against (*crying*, *walking*, \dots).
+
+\begin{center}
+barking vs crying $\rightarrow$\ \textcolor{primarygreen}{\bfseries dog}\qquad barking vs walking $\rightarrow$\ \textcolor{primarygreen}{\bfseries stop}
+\end{center}
+:::
+::: {.column width="42%"}
+\begin{block}{The trick}
+Change the foil, change the \emph{question}. The foil is how you \emph{aim} the explanation at one specific decision.
+\end{block}
+:::
+::::
+
+# Formal definition: contrastive saliency
+
+:::: columns
+::: {.column width="55%"}
+Non-contrastive gradient:
+$$ g(x_i) = \nabla_{x_i}\, q(y_t \mid x) $$
+Contrastive gradient:
+$$ g^{*}(x_i) = \nabla_{x_i}\big( q(y_t \mid x) - q(y_f \mid x) \big) $$
+:::
+::: {.column width="42%"}
+\begin{block}{Remarks}
+$\nabla$ just means “how much it influences”. Not “what raised $y_t$?” but “what raised $y_t$ \emph{while lowering} $y_f$?” --- the subtraction cancels shared evidence.
+\end{block}
+:::
+::::
+
+# Deep dive: why the subtraction works
+
+:::: columns
+::: {.column width="55%"}
+Walk $g^{*}(x_i) = \nabla_{x_i}(q(y_t\mid x) - q(y_f\mid x))$:
+
+1. $\nabla_{x_i}q(y_t\mid x)$ --- how $x_i$ pushes the **target** up.
+2. $\nabla_{x_i}q(y_f\mid x)$ --- how the **same** token pushes the **foil** up.
+3. Subtract: evidence raising *both* (“predict some verb-ing”) cancels.
+4. What survives separates $y_t$ from $y_f$ specifically.
+5. Norm $\Rightarrow$ magnitude; gradient $\times$ input $\Rightarrow$ signed direction.
+:::
+::: {.column width="42%"}
+\begin{block}{Remarks}
+Generic syntactic pressure is shared, so it disappears. The leftover is the \textbf{semantic / long-range} cue we wanted.
+\end{block}
+:::
+::::
+
+# Method 1: Contrastive Gradient Norm
+
+:::: columns
+::: {.column width="55%"}
+$$ S^{*}_{GN}(x_i) = \lVert g^{*}(x_i) \rVert_{L_1} $$
+
+- White-box, cheap (one backward pass).
+- **Magnitude** only, no direction.
+:::
+::: {.column width="42%"}
+\begin{block}{Use it for}
+“Does this token matter at all?” --- it tells you \emph{how strongly} $x_i$ tips the decision, not \emph{which way}.
+\end{block}
+:::
+::::
+
+# Method 2: Contrastive Gradient $\times$ Input
+
+:::: columns
+::: {.column width="55%"}
+$$ S_{GI}(x_i) = g(x_i)\cdot x_i,\quad S^{*}_{GI}(x_i) = g^{*}(x_i)\cdot x_i $$
+
+- White-box, cheap, and **signed**.
+- Multiplying by the embedding weights influence by how present the token is.
+:::
+::: {.column width="42%"}
+\begin{block}{Use it for}
+“\emph{Towards} $y_t$ (positive) or \emph{towards} the foil (negative)?” --- more information than Method 1.
+\end{block}
+:::
+::::
+
+# Method 3: Contrastive Input Erasure
+
+:::: columns
+::: {.column width="58%"}
+\resizebox{\linewidth}{!}{$\displaystyle S^{*}_{E}(x_i) = \big(q(y_t\mid x) - q(y_t\mid x_{\neg i})\big) - \big(q(y_f\mid x) - q(y_f\mid x_{\neg i})\big)$}
+
+- **Black-box:** remove $x_i$ and measure the change.
+- **Expensive:** one forward pass per token.
+:::
+::: {.column width="40%"}
+\begin{block}{Remarks}
+$x_{\neg i}$ is the sentence \emph{without} that word. Delete it: if $y_t$ drops and the foil $y_f$ rises, the word mattered.
+\end{block}
+:::
+::::
+
+# Deep dive: the three methods on one axis
+
+:::: columns
+::: {.column width="55%"}
+**Same question, three trade-offs.**
+
+- $S^{*}_{GN}$ (norm): cheap, white-box, *magnitude* --- “relevant?”
+- $S^{*}_{GI}$ (grad $\times$ input): cheap, white-box, *signed* --- “towards target or foil?”
+- $S^{*}_{E}$ (erasure): expensive, black-box, *direct* --- “measured, not approximated”.
+:::
+::: {.column width="42%"}
+\begin{block}{Key insight}
+Gradients \textbf{approximate} a perturbation; erasure \textbf{performs} it. Erasure is the ground truth you cannot afford at scale.
+\end{block}
+:::
+::::
+
+# Evaluation setup: BLiMP minimal pairs
+
+:::: columns
+::: {.column width="55%"}
+- **BLiMP** --- the Benchmark of Linguistic Minimal Pairs (Warstadt et al., 2020): 67 paradigms of minimal sentence pairs.
+- They use **5 phenomena / 12 paradigms** (anaphor, argument structure, determiner-noun, NPI [negative-polarity items], subject-verb).
+- Models: **GPT-2** (1.5B), **GPT-Neo** (2.7B).
+- Each paradigm has a **rule** marking the token that enforces grammaticality.
+:::
+::: {.column width="42%"}
+\begin{block}{Why BLiMP}
+They need an exam where the \emph{correct} causal token is known \emph{in advance} --- so a method can be graded objectively.
+\end{block}
+:::
+::::
+
+# Didactic aside: what is a “minimal pair”?
+
+:::: columns
+::: {.column width="55%"}
+Two sentences that differ in **one** spot, one grammatical and one not:
+
+\begin{center}
+“The \textbf{author laughs}.” \quad(\textbf{ok})\\
+“The \textbf{author laugh}.” \quad(*)
+\end{center}
+
+The single contrast isolates exactly one grammatical decision (subject--verb agreement).
+:::
+::: {.column width="42%"}
+\begin{block}{Why it is perfect here}
+A minimal pair \emph{is} a target/foil pair: \emph{laughs} vs \emph{laugh}. We already know the cause (the subject) --- so we can check whether the method points there.
+\end{block}
+:::
+::::
+
+# Deep dive: the alignment metrics
+
+:::: columns
+::: {.column width="55%"}
+$E$ = binary vector of “correct” evidence tokens; $S$ = saliency scores.
+
+- **Dot product** $S\cdot E$ --- saliency on true evidence (higher $=$ better).
+- **Probes needed** --- rank of the first true-evidence token (lower $=$ better).
+- **MRR** --- mean reciprocal rank of that token (higher $=$ better).
+:::
+::: {.column width="42%"}
+\begin{block}{Remarks}
+All three ask: \textbf{does the method put the correct token near the top?} Probes-needed and MRR are two views of the same ranking.
+\end{block}
+:::
+::::
+
+# BLiMP: which input token is the cause?
+
+:::: columns
+::: {.column width="55%"}
+\begin{block}{Anaphor number agreement}
+Acceptable: “Many \underline{teenagers} were helping \textbf{themselves}.”\\
+Unacceptable: “Many teenagers were helping \textbf{herself}.”
+\end{block}
+
+- The rule marks the antecedent **“teenagers”** as the evidence.
+- A good explanation of *themselves* vs *herself* ranks **teenagers** high.
+:::
+::: {.column width="42%"}
+\begin{block}{The test}
+Explaining \emph{themselves} vs \emph{herself}: if the method points at \textcolor{primarygreen}{\bfseries teenagers} it is good; if it points elsewhere, it is poor.
+\end{block}
+:::
+::::
+
+# Quantitative results: alignment on BLiMP
+
+:::: columns
+::: {.column width="55%"}
+\begin{center}
+\includegraphics[width=\linewidth]{imgs/d6.pdf}
+\end{center}
+:::
+::: {.column width="42%"}
+- Contrastive variants ($S^{*}$, green) align **better** with known evidence.
+- The gain **grows with distance**: further evidence $\Rightarrow$ bigger contrastive advantage.
+:::
+::::
+
+# Human study: contrastive simulatability
+
+:::: columns
+::: {.column width="42%"}
+\begin{tabular}{lr}\hline
+Method & Acc.\ (\%)\\ \hline
+None & 61.38\\
+$S_{GI}$ & 64.00\\
+$S^{*}_{GI}$ & \textbf{65.62}\\
+$S_{E}$ & 63.12\\
+$S^{*}_{E}$ & \textbf{64.62}\\ \hline
+\end{tabular}
+:::
+::: {.column width="55%"}
+10 ML grad students predict GPT-2's output from input $+$ explanation (4,000 judgments; model correct 50\%).
+
+\begin{block}{Remarks}
+Contrastive explanations make the model more \textbf{predictable} to a human --- that property is \emph{simulatability}.
+\end{block}
+:::
+::::
+
+# Use case: clustering decisions by their causes
+
+:::: columns
+::: {.column width="55%"}
+- Represent each foil by its contrastive-saliency vector, then **k-means cluster**.
+- Clusters recover grammatical categories **without supervision**:
+  - target male pronoun $\rightarrow$\ cluster of **female** pronouns;
+  - animate noun $\rightarrow$\ cluster of **inanimate** nouns;
+  - singular noun $\rightarrow$\ cluster of **plural** foils.
+:::
+::: {.column width="42%"}
+\begin{block}{Key insight}
+These clusters differ from word-embedding neighbours --- they reflect what the \textbf{model uses to decide}, not lexical similarity.
+\end{block}
+:::
+::::
+
+# Limitations of Yin \& Neubig
+
+- **Foil selection is hard and consequential:** open-ended generation has no rule for which foil to contrast against --- and changing the foil changes the result.
+- **Faithfulness vs.\ plausibility:** matching human intuition does not *prove* the saliency captures the true computation.
+- **Cost:** erasure is the most direct but scales poorly with length and foil-space size.
+
+# Concluding thoughts: connecting the two papers
+
+:::: columns
+::: {.column width="48%"}
+**Rajani et al. (2019)**
+
+- *Generated* natural-language explanations.
+- Optimised for **plausibility** $+$ accuracy.
+- Cannot guarantee the explanation *caused* the prediction.
+:::
+::: {.column width="48%"}
+**Yin \& Neubig (2022)**
+
+- *Token-level, contrastive* saliency.
+- Targets **faithful**, fine-grained evidence.
+- Needs a foil; faithfulness still not proven.
+:::
+::::
+
+\begin{block}{The shared thread}
+Both attack \emph{how do LMs reason} from opposite ends: \textbf{verbalise} the reasoning vs.\ \textbf{localise} the evidence.
+\end{block}
+
+# Recap --- the two papers at a glance
+
+\small\textcolor{primarygreen}{\bfseries Recap.}\ Both methods explain a trained \textbf{language model (LM)} \emph{from the outside} (inputs $\to$ outputs) --- but the LM itself differs per paper.\normalsize
+
+:::: columns
+::: {.column width="49%"}
+\begin{block}{Paper 1 $\cdot$ Rajani et al. (2019) --- CAGE}
+\textcolor{primarygreen}{\bfseries Verbalise the reasoning}\par\smallskip
+\footnotesize
+\begin{itemize}\setlength{\itemsep}{1pt}
+\item \textbf{Explains:} a BERT classifier (few answer options).
+\item \textbf{What:} a natural-language narrative.
+\item \textbf{Goal:} plausibility $+$ accuracy.
+\item \textbf{Family:} generated explanation.
+\item \textbf{Nature:} black-box (internals not inspected).
+\end{itemize}
+\end{block}
+:::
+::: {.column width="49%"}
+\begin{block}{Paper 2 $\cdot$ Yin \& Neubig (2022)}
+\textcolor{primarygreen}{\bfseries Localise the evidence}\par\smallskip
+\footnotesize
+\begin{itemize}\setlength{\itemsep}{1pt}
+\item \textbf{Explains:} a generative LM --- GPT-2 / GPT-Neo ($\sim 50{,}000$ tokens).
+\item \textbf{What:} attributes the output to input tokens.
+\item \textbf{Goal:} faithfulness, fine-grained evidence.
+\item \textbf{Family:} contrastive attribution (gradient/erasure).
+\item \textbf{Nature:} gradients (white-box) or perturbation.
+\end{itemize}
+\end{block}
+:::
+::::
+
+\begin{center}
+\includegraphics[width=0.78\linewidth,height=0.18\textheight,keepaspectratio]{imgs/d7.pdf}
+\end{center}
+
+# Open questions
+
+- Can generated explanations (Paper 1) be **constrained to be faithful** via contrastive saliency (Paper 2)?
+- What is the right way to **choose foils** for open-ended generation?
+- For regulated settings (EU AI Act, Art.\ 13), is a **plausible** explanation enough, or is **faithfulness** legally required?
+
+\begin{center}
+\vspace{0.6em}
+\Large\textbf{Discussion?}
+\end{center}
+
+# Thank you
+
+\begin{center}
+\vspace{1.2em}
+{\Huge \textcolor{primarygreen}{\bfseries Thank You!}}
+\end{center}
 
 # References {.allowframebreaks}
 
 \footnotesize
+
+- Devlin, J., Chang, M.-W., Lee, K., Toutanova, K. (2019). *BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding.* NAACL-HLT.
+- Lipton, P. (1990). *Contrastive Explanation.* Royal Institute of Philosophy Supplement 27: 247--266.
+- Radford, A., Narasimhan, K., Salimans, T., Sutskever, I. (2018). *Improving Language Understanding by Generative Pre-Training.* OpenAI tech report.
+- Rajani, N. F., McCann, B., Xiong, C., Socher, R. (2019). *Explain Yourself! Leveraging Language Models for Commonsense Reasoning.* ACL, 4932--4942.
+- Speer, R., Chin, J., Havasi, C. (2017). *ConceptNet 5.5: An Open Multilingual Graph of General Knowledge.* AAAI.
+- Talmor, A., Herzig, J., Lourie, N., Berant, J. (2019). *CommonsenseQA: A Question Answering Challenge Targeting Commonsense Knowledge.* NAACL-HLT, 4149--4158.
+- Warstadt, A., Parrish, A., Liu, H., et al. (2020). *BLiMP: The Benchmark of Linguistic Minimal Pairs for English.* TACL 8: 377--392.
+- Yin, K., Neubig, G. (2022). *Interpreting Language Models with Contrastive Explanations.* EMNLP, 184--198.
