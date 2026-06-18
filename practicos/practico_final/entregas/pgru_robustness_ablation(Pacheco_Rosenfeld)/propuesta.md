@@ -1,4 +1,4 @@
-# Validación, Robustez y Análisis de Componentes del Modelo PGRU mediante Datos Sintéticos y Ablación
+# PGRU Robustness and Component Ablation via Synthetic Data (Pacheco, Rosenfeld)
 
 **Integrantes:** Paula Pacheco, Hernán Rosenfeld
 
